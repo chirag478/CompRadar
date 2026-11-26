@@ -6,6 +6,31 @@
 
 const urlParams = new URLSearchParams(window.location.search);
 
+// Per-user private browser storage for Bookmarks & Tracking Stages
+function getLocalBookmarks() {
+  try {
+    return new Set(JSON.parse(localStorage.getItem('compradar_bookmarks') || '[]'));
+  } catch {
+    return new Set();
+  }
+}
+
+function saveLocalBookmarks(bmSet) {
+  localStorage.setItem('compradar_bookmarks', JSON.stringify(Array.from(bmSet)));
+}
+
+function getLocalStages() {
+  try {
+    return JSON.parse(localStorage.getItem('compradar_stages') || '{}');
+  } catch {
+    return {};
+  }
+}
+
+function saveLocalStages(stagesObj) {
+  localStorage.setItem('compradar_stages', JSON.stringify(stagesObj));
+}
+
 // State
 const state = {
   source: urlParams.get('source') || 'all',
@@ -506,7 +531,7 @@ async function loadStats() {
     if (statStrategy) animateValue(statStrategy, stats.strategy || 0);
     if (statMarketing) animateValue(statMarketing, stats.marketing || 0);
     if (statPrizePool) statPrizePool.textContent = stats.total_prize_pool || '₹4.2 Cr+';
-    animateValue(statBookmarks, stats.bookmarks || 0);
+    animateValue(statBookmarks, getLocalBookmarks().size);
     if (headerLiveStatus) {
       headerLiveStatus.textContent = `${stats.total || 0} Live Listings`;
     }
@@ -530,7 +555,6 @@ async function fetchOpportunities() {
     query: state.query,
     sort: state.sort,
     location: state.location,
-    bookmarked: state.savedOnly,
     urgent: state.urgentOnly,
     high_prize: state.highPrizeOnly
   });
@@ -540,7 +564,17 @@ async function fetchOpportunities() {
       signal: fetchAbortController.signal
     });
     const data = await res.json();
-    state.items = data.opportunities || [];
+    const bmSet = getLocalBookmarks();
+    const stageMap = getLocalStages();
+    let items = (data.opportunities || []).map(opp => ({
+      ...opp,
+      is_bookmarked: bmSet.has(opp.id),
+      application_status: stageMap[opp.id] || 'None'
+    }));
+    if (state.savedOnly) {
+      items = items.filter(opp => opp.is_bookmarked);
+    }
+    state.items = items;
     state.focusedIndex = -1;
     state.lastFetchTime = Date.now();
     renderOpportunities(state.items);
@@ -956,33 +990,30 @@ function closeDrawer() {
   state.selectedItem = null;
 }
 
-// Application Stage update
-async function updateItemStage(id, newStage) {
-  try {
-    const res = await fetch('/api/status', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id, status: newStage })
-    });
-    const data = await res.json();
-    
-    // Update local state item
-    const item = state.items.find(x => x.id === id);
-    if (item) {
-      item.application_status = data.application_status;
-    }
-    if (state.selectedItem && state.selectedItem.id === id) {
-      state.selectedItem.application_status = data.application_status;
-      drawerStageControl.querySelectorAll('.stage-btn').forEach(btn => {
-        btn.classList.toggle('active', btn.dataset.stage === data.application_status);
-      });
-    }
-    renderOpportunities(state.items);
-    if (state.focusedIndex >= 0) setFocusRow(state.focusedIndex);
-    showToast(`Stage updated to: ${newStage}`);
-  } catch (err) {
-    console.error('Stage update error:', err);
+// Application Stage update (stored privately per user in localStorage)
+function updateItemStage(id, newStage) {
+  const stageMap = getLocalStages();
+  if (!newStage || newStage === 'None') {
+    delete stageMap[id];
+  } else {
+    stageMap[id] = newStage;
   }
+  saveLocalStages(stageMap);
+
+  const savedStage = stageMap[id] || 'None';
+  const item = state.items.find(x => x.id === id);
+  if (item) {
+    item.application_status = savedStage;
+  }
+  if (state.selectedItem && state.selectedItem.id === id) {
+    state.selectedItem.application_status = savedStage;
+    drawerStageControl.querySelectorAll('.stage-btn').forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.stage === savedStage);
+    });
+  }
+  renderOpportunities(state.items);
+  if (state.focusedIndex >= 0) setFocusRow(state.focusedIndex);
+  showToast(`Stage updated to: ${savedStage}`);
 }
 
 // Pre-filled WhatsApp Team Pitch
@@ -1049,31 +1080,30 @@ async function triggerScrape() {
   }
 }
 
-// Toggle Bookmark
-async function toggleBookmark(id) {
-  try {
-    const res = await fetch('/api/bookmark', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id })
-    });
-    const data = await res.json();
-    const isSaved = data.is_bookmarked;
+// Toggle Bookmark (stored privately per user in localStorage)
+function toggleBookmark(id) {
+  const bmSet = getLocalBookmarks();
+  let isSaved;
+  if (bmSet.has(id)) {
+    bmSet.delete(id);
+    isSaved = false;
+  } else {
+    bmSet.add(id);
+    isSaved = true;
+  }
+  saveLocalBookmarks(bmSet);
 
-    const item = state.items.find(x => x.id === id);
-    if (item) item.is_bookmarked = isSaved;
+  const item = state.items.find(x => x.id === id);
+  if (item) item.is_bookmarked = isSaved;
 
+  animateValue(statBookmarks, bmSet.size);
+  showToast(isSaved ? '★ Saved to bookmarks (Press s)' : '☆ Removed from bookmarks');
+
+  if (state.savedOnly) {
+    fetchOpportunities();
+  } else {
     renderOpportunities(state.items);
     if (state.focusedIndex >= 0) setFocusRow(state.focusedIndex);
-
-    showToast(isSaved ? '★ Saved to bookmarks (Press s)' : '☆ Removed from bookmarks');
-    await loadStats();
-
-    if (state.savedOnly) {
-      fetchOpportunities();
-    }
-  } catch (err) {
-    console.error('Bookmark error:', err);
   }
 }
 

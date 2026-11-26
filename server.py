@@ -20,6 +20,14 @@ ADMIN_TOKEN = os.environ.get("COMPRADAR_ADMIN_TOKEN", "").strip()
 STATIC_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "static")
 aggregator = OpportunityAggregator()
 
+# In-memory rate limiting & brute-force lockout state
+_SECURITY_LOCK = threading.Lock()
+_AUTH_FAILURES = {}      # ip -> {"count": int, "locked_until": float}
+_SCRAPE_COOLDOWNS = {}   # ip -> last_timestamp
+MAX_AUTH_ATTEMPTS = 5
+AUTH_LOCKOUT_SECS = 900  # 15 minutes
+SCRAPE_COOLDOWN_SECS = 30
+
 def _background_scraper_loop(interval_hours=6):
     """
     Silent recurring background scraper loop that keeps opportunity data fresh
@@ -36,6 +44,12 @@ def _background_scraper_loop(interval_hours=6):
             print(f"[CompRadar AutoSync] Recurring background sync error: {ex}")
 
 class ScraperHandler(BaseHTTPRequestHandler):
+    def _get_client_ip(self):
+        xff = self.headers.get("X-Forwarded-For", "").strip()
+        if xff:
+            return xff.split(",")[0].strip()
+        return self.client_address[0] if self.client_address else "unknown"
+
     def _accepts_gzip(self):
         return "gzip" in self.headers.get("Accept-Encoding", "").lower()
 
@@ -207,9 +221,19 @@ class ScraperHandler(BaseHTTPRequestHandler):
             payload = {}
 
         if path == "/api/scrape":
+            client_ip = self._get_client_ip()
+            now = time.time()
+            with _SECURITY_LOCK:
+                last_scrape = _SCRAPE_COOLDOWNS.get(client_ip, 0)
+                if now - last_scrape < SCRAPE_COOLDOWN_SECS:
+                    wait_s = int(SCRAPE_COOLDOWN_SECS - (now - last_scrape)) + 1
+                    self._send_json({"error": f"Rate limit: please wait {wait_s}s before syncing again."}, status=429)
+                    return
+                _SCRAPE_COOLDOWNS[client_ip] = now
+
             cat = payload.get("category", "all")
             query = payload.get("query", None)
-            limit = int(payload.get("limit", 25))
+            limit = min(int(payload.get("limit", 25)), 50)
 
             result = aggregator.scrape_all(category=cat, query=query, limit=limit)
             self._send_json(result)
@@ -239,17 +263,40 @@ class ScraperHandler(BaseHTTPRequestHandler):
                 self._send_json({"error": "CSV payload exceeds 256 KB limit."}, status=413)
                 return
 
-            client_ip = self.client_address[0] if self.client_address else ""
-            is_local = client_ip in ("127.0.0.1", "::1")
+            client_ip = self._get_client_ip()
+            raw_ip = self.client_address[0] if self.client_address else ""
+            is_local = raw_ip in ("127.0.0.1", "::1") and not self.headers.get("X-Forwarded-For")
+            now = time.time()
+
+            with _SECURITY_LOCK:
+                rec = _AUTH_FAILURES.get(client_ip)
+                if rec and rec.get("locked_until", 0) > now:
+                    mins_left = max(1, int((rec["locked_until"] - now) / 60) + 1)
+                    self._send_json({"error": f"Too many failed attempts. Locked out for {mins_left} minute(s)."}, status=429)
+                    return
+
             provided_token = (self.headers.get("X-Admin-Token") or payload.get("admin_token") or "").strip()
 
             if ADMIN_TOKEN:
                 if not hmac.compare_digest(provided_token, ADMIN_TOKEN):
-                    self._send_json({"error": "Invalid or missing Admin Passkey."}, status=403)
+                    with _SECURITY_LOCK:
+                        rec = _AUTH_FAILURES.get(client_ip, {"count": 0, "locked_until": 0})
+                        rec["count"] += 1
+                        if rec["count"] >= MAX_AUTH_ATTEMPTS:
+                            rec["locked_until"] = now + AUTH_LOCKOUT_SECS
+                            _AUTH_FAILURES[client_ip] = rec
+                            self._send_json({"error": "Too many failed attempts. Locked out for 15 minutes."}, status=429)
+                            return
+                        _AUTH_FAILURES[client_ip] = rec
+                        remaining = MAX_AUTH_ATTEMPTS - rec["count"]
+                    self._send_json({"error": f"Invalid or missing Admin Passkey ({remaining} attempts left)."}, status=403)
                     return
             elif not is_local:
                 self._send_json({"error": "Admin Passkey not configured on server (COMPRADAR_ADMIN_TOKEN). Public imports are disabled."}, status=403)
                 return
+
+            with _SECURITY_LOCK:
+                _AUTH_FAILURES.pop(client_ip, None)
 
             csv_text = payload.get("csv_text", "")
             if not csv_text:
