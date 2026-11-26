@@ -3,14 +3,18 @@
 # 🎯 CompRadar
 ### Real-Time Competition Radar & Intelligence Terminal
 
-*A lightweight, zero-dependency intelligence terminal to scrape, filter, and track product competitions, tech hackathons, consulting case studies, and marketing challenges from Unstop, Devpost, and curated B-School feeds.*
+*A lightweight, zero-dependency intelligence terminal to scrape, filter, and track product competitions, tech hackathons, Kaggle ML bounties, consulting case studies, and B-School annual fests.*
 
 <br/>
 
 [![Python 3.10+](https://img.shields.io/badge/Python-3.10+-black?style=for-the-badge&logo=python)](https://python.org)
 [![Zero External Dependencies](https://img.shields.io/badge/Dependencies-Standard_Library-white?style=for-the-badge)](https://docs.python.org/3/)
+[![PWA Ready](https://img.shields.io/badge/PWA-Installable-zinc?style=for-the-badge)]()
 [![License: MIT](https://img.shields.io/badge/License-MIT-zinc?style=for-the-badge)](LICENSE)
-[![Platform: Cross-Platform](https://img.shields.io/badge/Platform-Windows_%7C_macOS_%7C_Linux-black?style=for-the-badge)]()
+
+<br/>
+
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/chirag478/CompRadar)
 
 </div>
 
@@ -54,6 +58,7 @@
 - **Aggregate Prize Pool Ticker**: Dynamic real-time calculation aggregating total active rewards (₹4.2 Cr+ / $2M+) across active competitions.
 - **Pre-filled WhatsApp Team Pitch**: One-click formatted team recruitment message generator with role callouts and direct registration link.
 - **Progressive Web App (PWA)**: Installable on iOS, Android, and Desktop (`manifest.json` & `sw.js`) with offline shell caching.
+- **Responsive & Performance-Optimized**: Mobile/tablet breakpoints (`<= 640px`, `<= 950px`, `<= 1120px`), `gzip` response compression, `Cache-Control` static asset caching, `DocumentFragment` DOM batching, `content-visibility: auto`, and delegated event handling.
 - **Strict Active Filter**: Automatically excludes competitions whose deadlines have passed (`remain_days < 0` or status `FINISHED`).
 - **Live Urgency Radar**:
   - Real-time countdown clock calculating exact time remaining (`Xd Xh Xm Xs`) for upcoming deadlines.
@@ -149,16 +154,22 @@ compradar/
 
 ---
 
-## ☁️ 1-Click Cloud Deployment
+## ☁️ 1-Click Free Cloud Hosting
 
-CompRadar is zero-dependency and container-ready with dynamic `$PORT` binding:
+CompRadar is zero-dependency, container-ready, and supports dynamic `$PORT` binding out of the box:
 
-### Deploy to Render
-1. Fork or push this repository to your GitHub account.
-2. In [Render Dashboard](https://dashboard.render.com/), choose **New Blueprint Instance** and point to your repository (`render.yaml`).
-3. Deploy is automatic with zero configuration.
+### Option 1: Deploy to Render (Free `*.onrender.com` Subdomain)
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/chirag478/CompRadar)
 
-### Deploy with Docker
+1. Click **Deploy to Render** above (reads [`render.yaml`](render.yaml) automatically).
+2. Sign in with GitHub, confirm the service name (`compradar`), and click **Apply**.
+3. Your live instance will be available at `https://compradar.onrender.com` with automatic HTTPS and auto-deploys on push.
+
+### Option 2: Railway / Koyeb
+- **Railway**: Connect `chirag478/CompRadar` on [railway.app](https://railway.app) (uses [`railway.json`](railway.json) and [`Procfile`](Procfile)) and generate a free `*.up.railway.app` domain.
+- **Koyeb**: Deploy directly from GitHub using the included [`Dockerfile`](Dockerfile) for a free `*.koyeb.app` URL.
+
+### Option 3: Local / Self-Hosted Docker
 ```bash
 docker build -t compradar .
 docker run -p 5000:5000 compradar
