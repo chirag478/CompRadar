@@ -1,7 +1,7 @@
 {
   "version": 2,
   "rewrites": [
-    { "source": "/api/(.*)", "destination": "/api/index.py" },
+    { "source": "/api/(.*)", "destination": "/api/index.py?__route=/api/$1" },
     { "source": "/manifest.json", "destination": "/static/manifest.json" },
     { "source": "/sw.js", "destination": "/static/sw.js" },
     { "source": "/style.css", "destination": "/static/style.css" },

@@ -101,8 +101,8 @@ class ScraperHandler(BaseHTTPRequestHandler):
 
     def do_GET(self):
         parsed = urllib.parse.urlparse(self.path)
-        path = parsed.path
         query_params = urllib.parse.parse_qs(parsed.query)
+        path = query_params.pop("__route", [parsed.path])[0]
 
         # API Endpoints
         if path == "/api/opportunities":
@@ -195,7 +195,8 @@ class ScraperHandler(BaseHTTPRequestHandler):
 
     def do_POST(self):
         parsed = urllib.parse.urlparse(self.path)
-        path = parsed.path
+        query_params = urllib.parse.parse_qs(parsed.query)
+        path = query_params.pop("__route", [parsed.path])[0]
 
         content_length = int(self.headers.get('Content-Length', 0))
         post_data = self.rfile.read(content_length).decode('utf-8') if content_length > 0 else "{}"
