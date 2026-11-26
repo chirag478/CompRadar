@@ -120,8 +120,12 @@ def get_opportunities(source=None, category=None, query=None, bookmarked_only=Fa
         params.append(app_status)
 
     if source and source.lower() != "all":
-        conditions.append("LOWER(source) LIKE LOWER(?)")
-        params.append(f"%{source}%")
+        src_clean = source.lower().replace("-", "").replace("_", "")
+        if "bschool" in src_clean:
+            conditions.append("(LOWER(source) LIKE '%b-school%' OR LOWER(source) LIKE '%bschool%' OR LOWER(source) LIKE '%fest%')")
+        else:
+            conditions.append("LOWER(source) LIKE LOWER(?)")
+            params.append(f"%{source}%")
 
     if category and category.lower() != "all":
         if category == "hackathons":
@@ -202,6 +206,44 @@ def update_application_status(opp_id, status):
     conn.close()
     return status
 
+def compute_total_prize_pool(cursor, active_cond):
+    import re
+    cursor.execute(f"SELECT prize FROM opportunities WHERE {active_cond}")
+    rows = cursor.fetchall()
+    total_inr = 0.0
+
+    for (p,) in rows:
+        if not p:
+            continue
+        s = p.lower().replace(',', '')
+        # USD
+        usd_m = re.search(r'\$\s*([0-9]+(?:\.[0-9]+)?)', s)
+        if usd_m:
+            total_inr += float(usd_m.group(1)) * 85.0
+            continue
+        # Crore
+        cr_m = re.search(r'([0-9]+(?:\.[0-9]+)?)\s*(?:crore|cr)', s)
+        if cr_m:
+            total_inr += float(cr_m.group(1)) * 10000000.0
+            continue
+        # Lakh
+        lakh_m = re.search(r'([0-9]+(?:\.[0-9]+)?)\s*(?:lakh|lac)', s)
+        if lakh_m:
+            total_inr += float(lakh_m.group(1)) * 100000.0
+            continue
+        # Plain INR
+        inr_m = re.search(r'(?:₹|rs\.?|inr)\s*([0-9]+)', s)
+        if inr_m:
+            total_inr += float(inr_m.group(1))
+
+    if total_inr >= 10000000.0:
+        return f"₹{total_inr / 10000000.0:.2f} Cr+"
+    elif total_inr >= 100000.0:
+        return f"₹{total_inr / 100000.0:.1f}L+"
+    elif total_inr > 0:
+        return f"₹{int(total_inr):,}"
+    return "₹10L+"
+
 def get_stats():
     conn = get_connection()
     cursor = conn.cursor()
@@ -228,6 +270,8 @@ def get_stats():
     cursor.execute("SELECT COUNT(DISTINCT source) FROM opportunities")
     sources = cursor.fetchone()[0]
 
+    prize_pool = compute_total_prize_pool(cursor, active_cond)
+
     conn.close()
     return {
         "total": total,
@@ -236,7 +280,8 @@ def get_stats():
         "strategy": strategy,
         "marketing": marketing,
         "bookmarks": bookmarks,
-        "sources": sources
+        "sources": sources,
+        "total_prize_pool": prize_pool
     }
 
 init_db()

@@ -1,0 +1,18 @@
+{
+  "name": "CompRadar | Competition & Hackathon Intelligence",
+  "short_name": "CompRadar",
+  "description": "Live intelligence radar for high-value hackathons, B-School case studies, and engineering bounties.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#08080a",
+  "theme_color": "#08080a",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='45' fill='%2308080a' stroke='%23ffffff' stroke-width='3'/%3E%3Ccircle cx='50' cy='50' r='28' fill='none' stroke='%23383842' stroke-width='2' stroke-dasharray='4 4'/%3E%3Cline x1='50' y1='5' x2='50' y2='95' stroke='%23454555' stroke-width='2'/%3E%3Cline x1='5' y1='50' x2='95' y2='50' stroke='%23454555' stroke-width='2'/%3E%3Ccircle cx='50' cy='50' r='6' fill='%23ffffff'/%3E%3Ccircle cx='68' cy='36' r='4' fill='%23ffffff'/%3E%3C/svg%3E",
+      "sizes": "192x192 512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

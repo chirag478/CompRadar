@@ -50,6 +50,7 @@ const statHackathons = document.getElementById('statHackathons');
 const statCaseStudies = document.getElementById('statCaseStudies');
 const statStrategy = document.getElementById('statStrategy');
 const statMarketing = document.getElementById('statMarketing');
+const statPrizePool = document.getElementById('statPrizePool');
 const statBookmarks = document.getElementById('statBookmarks');
 const headerLiveStatus = document.getElementById('headerLiveStatus');
 
@@ -426,6 +427,7 @@ async function loadStats() {
     animateValue(statCaseStudies, stats.case_studies || 0);
     if (statStrategy) animateValue(statStrategy, stats.strategy || 0);
     if (statMarketing) animateValue(statMarketing, stats.marketing || 0);
+    if (statPrizePool) statPrizePool.textContent = stats.total_prize_pool || '₹4.2 Cr+';
     animateValue(statBookmarks, stats.bookmarks || 0);
     if (headerLiveStatus) {
       headerLiveStatus.textContent = `${stats.total || 0} Live Listings`;
@@ -938,18 +940,28 @@ async function updateItemStage(id, newStage) {
   }
 }
 
-// Formatted WhatsApp text copy
+// Pre-filled WhatsApp Team Pitch
 function copyWhatsAppSummary(opp) {
-  const text = `🎯 *${opp.title}*
-🏛 *Host:* ${opp.organizer} (${opp.location || 'Online'})
-⏳ *Deadline:* ${opp.days_left || opp.deadline || 'Ongoing'}
-🏆 *Reward:* ${opp.prize || 'Certificates & Awards'}
-📁 *Track:* ${opp.category}
-🔗 *Apply here:* ${opp.url}`;
+  openWhatsAppPitch(opp);
+}
 
-  navigator.clipboard.writeText(text).then(() => {
-    showToast('Copied WhatsApp-formatted message!');
-  });
+function openWhatsAppPitch(opp) {
+  const text = `🔥 *Team Up for ${opp.title}!*
+🏛 *Host:* ${opp.organizer} (${opp.location || 'Online'})
+💰 *Prize Pool:* ${opp.prize || 'Awards & Certificates'}
+⏳ *Deadline:* ${opp.days_left || opp.deadline || 'Ongoing'}
+📁 *Track:* ${opp.category}
+
+👉 *Details & Registration:* ${opp.url}
+
+_Found via CompRadar_`;
+
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(text).catch(() => {});
+  }
+  const waUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`;
+  window.open(waUrl, '_blank');
+  showToast('Opening WhatsApp & copied pitch to clipboard!');
 }
 
 function copyUrl(url) {
@@ -1044,6 +1056,15 @@ function showToast(msg) {
   toastTimer = setTimeout(() => {
     toastEl.classList.add('hidden');
   }, 2300);
+}
+
+// Register Service Worker for PWA Offline Support
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js')
+      .then((reg) => console.log('[CompRadar PWA] Service worker registered, scope:', reg.scope))
+      .catch((err) => console.log('[CompRadar PWA] SW registration notice:', err));
+  });
 }
 
 // HTML Escaper

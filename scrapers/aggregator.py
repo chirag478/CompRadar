@@ -1,5 +1,6 @@
 """
 Aggregator Module: coordinates multi-platform scraping, merging, and exports.
+Includes Unstop, Devpost, Kaggle, B-School Fests, and Curated Feeds.
 """
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import csv
@@ -7,6 +8,8 @@ import io
 import json
 from scrapers.unstop import UnstopScraper
 from scrapers.devpost import DevpostScraper
+from scrapers.kaggle import KaggleScraper
+from scrapers.bschool_fests import BSchoolFestScraper
 from scrapers.curated import CuratedFeedScraper
 import database
 
@@ -14,24 +17,34 @@ class OpportunityAggregator:
     def __init__(self):
         self.unstop = UnstopScraper()
         self.devpost = DevpostScraper()
+        self.kaggle = KaggleScraper()
+        self.bschool_fests = BSchoolFestScraper()
         self.curated = CuratedFeedScraper()
 
-    def scrape_all(self, category="all", query=None, limit=20):
+    def scrape_all(self, category="all", query=None, limit=25):
         """
-        Executes scrapers concurrently and persists fresh opportunities into DB.
+        Executes all platform scrapers concurrently and persists fresh opportunities into DB.
         """
         results = []
         futures = []
 
-        with ThreadPoolExecutor(max_workers=4) as executor:
-            # Unstop scraper task
+        with ThreadPoolExecutor(max_workers=5) as executor:
+            # 1. Unstop Scraper (All domains)
             futures.append(executor.submit(self.unstop.scrape, category=category, query=query, limit=limit))
             
-            # Devpost scraper task (Devpost mainly hosts hackathons & AI/product challenges)
+            # 2. Devpost Scraper (Tech, Hackathons, Product)
             if category in ["all", "hackathons", "tech", "product"]:
                 futures.append(executor.submit(self.devpost.scrape, query=query, limit=limit))
 
-            # Curated Feed scraper task
+            # 3. Kaggle Scraper (Tech, AI/ML, Data Science, Hackathons)
+            if category in ["all", "hackathons", "tech", "ml", "ai"]:
+                futures.append(executor.submit(self.kaggle.scrape, category=category, query=query, limit=limit))
+
+            # 4. Premier B-School Fests Scraper (Case Studies, Strategy, Marketing)
+            if category in ["all", "case_studies", "strategy", "marketing", "business"]:
+                futures.append(executor.submit(self.bschool_fests.scrape, category=category, query=query, limit=limit))
+
+            # 5. Curated Feed Scraper
             futures.append(executor.submit(self.curated.scrape, category=category, query=query, limit=limit))
 
             for future in as_completed(futures):
@@ -42,7 +55,7 @@ class OpportunityAggregator:
                 except Exception as e:
                     print(f"[Aggregator] Scraper execution error: {e}")
 
-        # Save to database
+        # Save to database (deduplicates automatically)
         saved_count = database.save_opportunities(results)
         return {
             "scraped_count": len(results),

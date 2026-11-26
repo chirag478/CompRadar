@@ -1,18 +1,36 @@
 """
 CompRadar - API & Web Server
 Zero-dependency, multi-threaded HTTP server for CompRadar
+Includes automatic background scraping, PWA support, and cloud-ready port configuration.
 """
 from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
 import urllib.parse
 import json
 import os
 import mimetypes
+import threading
+import time
 import database
 from scrapers.aggregator import OpportunityAggregator
 
-PORT = 5000
+PORT = int(os.environ.get("PORT", 5000))
 STATIC_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "static")
 aggregator = OpportunityAggregator()
+
+def _background_scraper_loop(interval_hours=6):
+    """
+    Silent recurring background scraper loop that keeps opportunity data fresh
+    without blocking user interaction or requiring manual scraping.
+    """
+    while True:
+        try:
+            # Sleep 6 hours between automated sync cycles
+            time.sleep(interval_hours * 3600)
+            print("[CompRadar AutoSync] Starting scheduled background refresh across all sources...")
+            res = aggregator.scrape_all(limit=30)
+            print(f"[CompRadar AutoSync] Auto-refresh complete. Processed {res.get('scraped_count', 0)} entries.")
+        except Exception as ex:
+            print(f"[CompRadar AutoSync] Recurring background sync error: {ex}")
 
 class ScraperHandler(BaseHTTPRequestHandler):
     def _send_json(self, data, status=200):
@@ -34,7 +52,12 @@ class ScraperHandler(BaseHTTPRequestHandler):
         if not content_type:
             content_type, _ = mimetypes.guess_type(filepath)
             if not content_type:
-                content_type = "application/octet-stream"
+                if filepath.endswith(".json") or filepath.endswith(".webmanifest"):
+                    content_type = "application/manifest+json"
+                elif filepath.endswith(".js"):
+                    content_type = "application/javascript"
+                else:
+                    content_type = "application/octet-stream"
 
         with open(filepath, "rb") as f:
             content = f.read()
@@ -42,6 +65,7 @@ class ScraperHandler(BaseHTTPRequestHandler):
         self.send_response(200)
         self.send_header("Content-Type", content_type)
         self.send_header("Content-Length", str(len(content)))
+        self.send_header("Access-Control-Allow-Origin", "*")
         self.end_headers()
         self.wfile.write(content)
 
@@ -108,7 +132,7 @@ class ScraperHandler(BaseHTTPRequestHandler):
                 content = aggregator.export_json(items).encode('utf-8')
                 self.send_response(200)
                 self.send_header("Content-Type", "application/json")
-                self.send_header("Content-Disposition", "attachment; filename=opportunities.json")
+                self.send_header("Content-Disposition", "attachment; filename=compradar_opportunities.json")
                 self.send_header("Content-Length", str(len(content)))
                 self.end_headers()
                 self.wfile.write(content)
@@ -117,10 +141,18 @@ class ScraperHandler(BaseHTTPRequestHandler):
                 content = csv_str.encode('utf-8')
                 self.send_response(200)
                 self.send_header("Content-Type", "text/csv; charset=utf-8")
-                self.send_header("Content-Disposition", "attachment; filename=opportunities.csv")
+                self.send_header("Content-Disposition", "attachment; filename=compradar_opportunities.csv")
                 self.send_header("Content-Length", str(len(content)))
                 self.end_headers()
                 self.wfile.write(content)
+            return
+
+        # PWA Assets Root Aliases
+        if path == "/manifest.json":
+            self._send_file(os.path.join(STATIC_DIR, "manifest.json"), "application/manifest+json")
+            return
+        elif path == "/sw.js":
+            self._send_file(os.path.join(STATIC_DIR, "sw.js"), "application/javascript")
             return
 
         # Serve Frontend Static Assets
@@ -177,7 +209,6 @@ class ScraperHandler(BaseHTTPRequestHandler):
         elif path == "/api/import-csv":
             csv_text = payload.get("csv_text", "")
             if not csv_text:
-                # Fallback to direct raw body if posted as plain text
                 csv_text = post_data
             if not csv_text.strip():
                 self._send_json({"error": "Missing csv content"}, status=400)
@@ -194,17 +225,22 @@ def run(port=PORT):
     database.init_db()
     stats = database.get_stats()
     if stats['total'] == 0:
-        print("[Startup] Performing initial scrape to populate catalog...")
+        print("[Startup] Performing initial multi-source scrape...")
         try:
-            aggregator.scrape_all(category="all", limit=15)
+            aggregator.scrape_all(category="all", limit=20)
             print("[Startup] Initial catalog populated successfully!")
         except Exception as e:
             print(f"[Startup] Initial scrape notice: {e}")
 
+    # Launch daemon background scraper thread (every 6 hours)
+    bg_sync = threading.Thread(target=_background_scraper_loop, args=(6,), daemon=True)
+    bg_sync.start()
+    print("[Startup] Background auto-sync scheduler initialized (every 6 hours).")
+
     server_address = ('', port)
     httpd = ThreadingHTTPServer(server_address, ScraperHandler)
     print(f"\n========================================================")
-    print(f"  Opportunity Scraper Web Interface Running!")
+    print(f"  CompRadar Server Active on port {port}")
     print(f"  Local URL:  http://localhost:{port}")
     print(f"========================================================\n")
     try:

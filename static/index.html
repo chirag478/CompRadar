@@ -4,6 +4,10 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>CompRadar &mdash; Competition Radar & Intelligence</title>
+  <meta name="theme-color" content="#08080a">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="manifest" href="/manifest.json">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet">
@@ -94,6 +98,11 @@
       </div>
       <div class="ribbon-divider"></div>
       <div class="metric-segment">
+        <span class="metric-num" id="statPrizePool">--</span>
+        <span class="metric-meta">Active Rewards</span>
+      </div>
+      <div class="ribbon-divider"></div>
+      <div class="metric-segment">
         <span class="metric-num" id="statBookmarks">0</span>
         <span class="metric-meta">Bookmarked</span>
       </div>
@@ -154,7 +163,9 @@
         <button class="source-tab active" data-source="all">All Sources</button>
         <button class="source-tab" data-source="unstop">Unstop</button>
         <button class="source-tab" data-source="devpost">Devpost</button>
-        <button class="source-tab" data-source="curated">Curated Feed</button>
+        <button class="source-tab" data-source="kaggle">Kaggle & ML</button>
+        <button class="source-tab" data-source="bschool">B-School Fests</button>
+        <button class="source-tab" data-source="curated">Curated</button>
       </div>
 
       <div class="filter-separator"></div>
@@ -328,8 +339,8 @@
           <button id="drawerCopyBtn" class="btn btn-outline" style="flex: 1;">
             Copy Link
           </button>
-          <button id="drawerShareBtn" class="btn btn-outline" style="flex: 1;" title="Copy clean formatted summary ready for WhatsApp or Slack">
-            Copy for WhatsApp
+          <button id="drawerShareBtn" class="btn btn-outline" style="flex: 1;" title="Open WhatsApp with pre-filled team pitch">
+            Pitch on WhatsApp 💬
           </button>
         </div>
       </div>

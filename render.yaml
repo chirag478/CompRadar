@@ -1,0 +1,14 @@
+# Render Blueprint Specification for CompRadar
+services:
+  - type: web
+    name: compradar
+    runtime: python
+    plan: free
+    region: oregon
+    buildCommand: ""
+    startCommand: python server.py
+    envVars:
+      - key: PORT
+        value: 10000
+      - key: PYTHONUNBUFFERED
+        value: "1"
