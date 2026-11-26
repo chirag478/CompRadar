@@ -1,10 +1,11 @@
 // CompRadar Service Worker
 // Enables offline shell caching & smooth mobile PWA experience
 
-const CACHE_NAME = 'compradar-v6';
+const CACHE_NAME = 'compradar-v7';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
+  '/style.css',
   '/app.js',
   '/manifest.json'
 ];
@@ -42,21 +43,16 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Cache-first for static shell assets
+  // Network-first for static shell assets so updates apply immediately, fallback to cache offline
   event.respondWith(
-    caches.match(event.request).then((cachedResponse) => {
-      if (cachedResponse) {
-        return cachedResponse;
+    fetch(event.request).then((networkResponse) => {
+      if (networkResponse && networkResponse.status === 200) {
+        const responseToCache = networkResponse.clone();
+        caches.open(CACHE_NAME).then((cache) => {
+          cache.put(event.request, responseToCache);
+        });
       }
-      return fetch(event.request).then((networkResponse) => {
-        if (networkResponse && networkResponse.status === 200) {
-          const responseToCache = networkResponse.clone();
-          caches.open(CACHE_NAME).then((cache) => {
-            cache.put(event.request, responseToCache);
-          });
-        }
-        return networkResponse;
-      });
-    })
+      return networkResponse;
+    }).catch(() => caches.match(event.request))
   );
 });
