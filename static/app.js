@@ -1,0 +1,1055 @@
+/**
+ * CompRadar Frontend Engine
+ * Features: Keyboard Navigation (j/k/s/c/w/o), In-Place Column Sorting,
+ * Application Stage CRM, WhatsApp Formatted Sharing, and Real-Time Radar.
+ */
+
+const urlParams = new URLSearchParams(window.location.search);
+
+// State
+const state = {
+  source: urlParams.get('source') || 'all',
+  category: urlParams.get('category') || 'all',
+  query: urlParams.get('q') || '',
+  sort: 'deadline',
+  savedOnly: false,
+  urgentOnly: false,
+  highPrizeOnly: false,
+  viewMode: urlParams.get('view') || localStorage.getItem('compradar_view') || localStorage.getItem('oppscout_view') || 'list', // 'list' | 'grid'
+  items: [],
+  selectedItem: null,
+  focusedIndex: -1,
+  isScraping: false
+};
+
+// DOM References
+const searchInput = document.getElementById('searchInput');
+const clearSearch = document.getElementById('clearSearch');
+const sortSelect = document.getElementById('sortSelect');
+const savedFilterBtn = document.getElementById('savedFilterBtn');
+const filterUrgentBtn = document.getElementById('filterUrgentBtn');
+const filterHighPrizeBtn = document.getElementById('filterHighPrizeBtn');
+const viewListBtn = document.getElementById('viewListBtn');
+const viewGridBtn = document.getElementById('viewGridBtn');
+const scrapeBtn = document.getElementById('scrapeBtn');
+const emptyScrapeBtn = document.getElementById('emptyScrapeBtn');
+const scrapeProgress = document.getElementById('scrapeProgress');
+const opportunitiesContainer = document.getElementById('opportunitiesContainer');
+const emptyState = document.getElementById('emptyState');
+const resultsCount = document.getElementById('resultsCount');
+const lastScrapedText = document.getElementById('lastScrapedText');
+const liveDeadlineTicker = document.getElementById('liveDeadlineTicker');
+const toastEl = document.getElementById('toast');
+
+// State tracking for live ticker
+state.lastFetchTime = Date.now();
+
+// Stats Elements
+const statTotal = document.getElementById('statTotal');
+const statHackathons = document.getElementById('statHackathons');
+const statCaseStudies = document.getElementById('statCaseStudies');
+const statStrategy = document.getElementById('statStrategy');
+const statMarketing = document.getElementById('statMarketing');
+const statBookmarks = document.getElementById('statBookmarks');
+const headerLiveStatus = document.getElementById('headerLiveStatus');
+
+// Export Dropdown
+const exportBtn = document.getElementById('exportBtn');
+const exportMenu = document.getElementById('exportMenu');
+const exportCsv = document.getElementById('exportCsv');
+const exportJson = document.getElementById('exportJson');
+
+// Modal Elements
+const importModal = document.getElementById('importModal');
+const importModalBtn = document.getElementById('importModalBtn');
+const closeModalBtn = document.getElementById('closeModalBtn');
+const cancelModalBtn = document.getElementById('cancelModalBtn');
+const submitImportBtn = document.getElementById('submitImportBtn');
+const csvFileInput = document.getElementById('csvFileInput');
+const csvTextInput = document.getElementById('csvTextInput');
+
+// Shortcuts Elements
+const shortcutsPillBtn = document.getElementById('shortcutsPillBtn');
+const shortcutsModal = document.getElementById('shortcutsModal');
+const closeShortcutsBtn = document.getElementById('closeShortcutsBtn');
+
+// Drawer Elements
+const detailsDrawer = document.getElementById('detailsDrawer');
+const detailsDrawerBackdrop = document.getElementById('detailsDrawerBackdrop');
+const closeDrawerBtn = document.getElementById('closeDrawerBtn');
+const drawerBadges = document.getElementById('drawerBadges');
+const drawerTitle = document.getElementById('drawerTitle');
+const drawerOrganizer = document.getElementById('drawerOrganizer');
+const drawerDeadline = document.getElementById('drawerDeadline');
+const drawerPrize = document.getElementById('drawerPrize');
+const drawerLocation = document.getElementById('drawerLocation');
+const drawerSource = document.getElementById('drawerSource');
+const drawerTags = document.getElementById('drawerTags');
+const drawerApplyLink = document.getElementById('drawerApplyLink');
+const drawerCopyBtn = document.getElementById('drawerCopyBtn');
+const drawerShareBtn = document.getElementById('drawerShareBtn');
+const drawerStageControl = document.getElementById('drawerStageControl');
+
+// Initialize on Load
+document.addEventListener('DOMContentLoaded', () => {
+  setupEventListeners();
+  applyViewMode(state.viewMode);
+  loadStats();
+  fetchOpportunities();
+  startLiveTickers();
+});
+
+// Pointer tracking for tactile card illumination
+document.addEventListener('pointermove', (e) => {
+  const card = e.target.closest('.grid-card');
+  if (card) {
+    const rect = card.getBoundingClientRect();
+    card.style.setProperty('--mx', `${e.clientX - rect.left}px`);
+    card.style.setProperty('--my', `${e.clientY - rect.top}px`);
+  }
+}, { passive: true });
+
+function setupEventListeners() {
+  // Global Keyboard shortcuts
+  document.addEventListener('keydown', (e) => {
+    // If typing inside an input or textarea, only allow Escape
+    if (['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement.tagName)) {
+      if (e.key === 'Escape') {
+        document.activeElement.blur();
+      }
+      return;
+    }
+
+    // '/' Focus search
+    if (e.key === '/') {
+      e.preventDefault();
+      searchInput.focus();
+      return;
+    }
+
+    // '?' Toggle shortcuts
+    if (e.key === '?') {
+      e.preventDefault();
+      shortcutsModal.classList.toggle('hidden');
+      return;
+    }
+
+    // 'Escape' Close drawers / modals
+    if (e.key === 'Escape') {
+      closeDrawer();
+      hideModal();
+      shortcutsModal.classList.add('hidden');
+      return;
+    }
+
+    // Table / Grid Row Navigation (j / k or ArrowDown / ArrowUp)
+    if (['j', 'ArrowDown'].includes(e.key)) {
+      e.preventDefault();
+      moveFocus(1);
+      return;
+    }
+    if (['k', 'ArrowUp'].includes(e.key)) {
+      e.preventDefault();
+      moveFocus(-1);
+      return;
+    }
+
+    // If we have an active focused row
+    if (state.focusedIndex >= 0 && state.focusedIndex < state.items.length) {
+      const current = state.items[state.focusedIndex];
+
+      // 'Enter' or 'Space' -> Open drawer
+      if (['Enter', ' '].includes(e.key)) {
+        e.preventDefault();
+        openDrawer(current);
+        return;
+      }
+      // 's' -> Star / Bookmark
+      if (e.key === 's') {
+        e.preventDefault();
+        toggleBookmark(current.id);
+        return;
+      }
+      // 'c' -> Copy link
+      if (e.key === 'c') {
+        e.preventDefault();
+        copyUrl(current.url);
+        return;
+      }
+      // 'w' -> Copy formatted WhatsApp text
+      if (e.key === 'w') {
+        e.preventDefault();
+        copyWhatsAppSummary(current);
+        return;
+      }
+      // 'o' -> Open link in new tab
+      if (e.key === 'o') {
+        e.preventDefault();
+        window.open(current.url, '_blank');
+        return;
+      }
+    }
+  });
+
+  // Search input debounced
+  let searchTimer;
+  searchInput.addEventListener('input', (e) => {
+    state.query = e.target.value.trim();
+    if (state.query) {
+      clearSearch.classList.remove('hidden');
+    } else {
+      clearSearch.classList.add('hidden');
+    }
+    clearTimeout(searchTimer);
+    searchTimer = setTimeout(fetchOpportunities, 220);
+  });
+
+  clearSearch.addEventListener('click', () => {
+    searchInput.value = '';
+    state.query = '';
+    clearSearch.classList.add('hidden');
+    fetchOpportunities();
+    searchInput.focus();
+  });
+
+  // Sort dropdown
+  sortSelect.addEventListener('change', (e) => {
+    state.sort = e.target.value;
+    fetchOpportunities();
+  });
+
+  // Source segmented tabs
+  document.querySelectorAll('[data-source]').forEach(tab => {
+    tab.addEventListener('click', () => {
+      document.querySelectorAll('[data-source]').forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+      state.source = tab.dataset.source;
+      fetchOpportunities();
+    });
+  });
+
+  // Category filter chips
+  document.querySelectorAll('[data-category]').forEach(chip => {
+    chip.addEventListener('click', () => {
+      document.querySelectorAll('[data-category]').forEach(c => c.classList.remove('active'));
+      chip.classList.add('active');
+      state.category = chip.dataset.category;
+      fetchOpportunities();
+    });
+  });
+
+  // Saved bookmark filter
+  savedFilterBtn.addEventListener('click', () => {
+    state.savedOnly = !state.savedOnly;
+    savedFilterBtn.classList.toggle('active', state.savedOnly);
+    fetchOpportunities();
+  });
+
+  // Preset Filters
+  if (filterUrgentBtn) {
+    filterUrgentBtn.addEventListener('click', () => {
+      state.urgentOnly = !state.urgentOnly;
+      filterUrgentBtn.classList.toggle('active', state.urgentOnly);
+      fetchOpportunities();
+    });
+  }
+
+  if (filterHighPrizeBtn) {
+    filterHighPrizeBtn.addEventListener('click', () => {
+      state.highPrizeOnly = !state.highPrizeOnly;
+      filterHighPrizeBtn.classList.toggle('active', state.highPrizeOnly);
+      fetchOpportunities();
+    });
+  }
+
+  // View mode switcher
+  viewListBtn.addEventListener('click', () => applyViewMode('list'));
+  viewGridBtn.addEventListener('click', () => applyViewMode('grid'));
+
+  // Scrape triggers
+  scrapeBtn.addEventListener('click', triggerScrape);
+  if (emptyScrapeBtn) emptyScrapeBtn.addEventListener('click', triggerScrape);
+
+  // Export dropdown popover
+  exportBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    exportMenu.classList.toggle('hidden');
+  });
+
+  document.addEventListener('click', () => {
+    exportMenu.classList.add('hidden');
+  });
+
+  exportCsv.addEventListener('click', (e) => {
+    e.preventDefault();
+    downloadExport('csv');
+  });
+
+  exportJson.addEventListener('click', (e) => {
+    e.preventDefault();
+    downloadExport('json');
+  });
+
+  // Modal interactions
+  if (importModalBtn) {
+    importModalBtn.addEventListener('click', () => {
+      importModal.classList.remove('hidden');
+    });
+  }
+
+  const hideModal = () => {
+    if (importModal) importModal.classList.add('hidden');
+  };
+
+  if (closeModalBtn) closeModalBtn.addEventListener('click', hideModal);
+  if (cancelModalBtn) cancelModalBtn.addEventListener('click', hideModal);
+
+  if (csvFileInput) {
+    csvFileInput.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        csvTextInput.value = event.target.result;
+      };
+      reader.readAsText(file);
+    });
+  }
+
+  if (submitImportBtn) {
+    submitImportBtn.addEventListener('click', async () => {
+      const text = csvTextInput.value.trim();
+      if (!text) {
+        showToast('Paste CSV content or select a file first.');
+        return;
+      }
+      submitImportBtn.disabled = true;
+      submitImportBtn.textContent = 'Ingesting...';
+      try {
+        const res = await fetch('/api/import-csv', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ csv_text: text })
+        });
+        const data = await res.json();
+        showToast(`Ingested ${data.saved_count || 0} competitions!`);
+        hideModal();
+        csvTextInput.value = '';
+        await loadStats();
+        await fetchOpportunities();
+      } catch (err) {
+        console.error('Import error:', err);
+        showToast('Error importing CSV data.');
+      } finally {
+        submitImportBtn.disabled = false;
+        submitImportBtn.textContent = 'Ingest & Save Opportunities';
+      }
+    });
+  }
+
+  // Shortcuts Modal
+  if (shortcutsPillBtn) {
+    shortcutsPillBtn.addEventListener('click', () => {
+      shortcutsModal.classList.toggle('hidden');
+    });
+  }
+  if (closeShortcutsBtn) {
+    closeShortcutsBtn.addEventListener('click', () => {
+      shortcutsModal.classList.add('hidden');
+    });
+  }
+
+  // Drawer interactions
+  if (closeDrawerBtn) closeDrawerBtn.addEventListener('click', closeDrawer);
+  if (detailsDrawerBackdrop) detailsDrawerBackdrop.addEventListener('click', closeDrawer);
+
+  // Application Stage buttons in Drawer
+  if (drawerStageControl) {
+    drawerStageControl.querySelectorAll('.stage-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        if (!state.selectedItem) return;
+        const newStage = btn.dataset.stage;
+        updateItemStage(state.selectedItem.id, newStage);
+      });
+    });
+  }
+}
+
+function applyViewMode(mode) {
+  state.viewMode = mode;
+  localStorage.setItem('compradar_view', mode);
+
+  viewListBtn.classList.toggle('active', mode === 'list');
+  viewGridBtn.classList.toggle('active', mode === 'grid');
+
+  opportunitiesContainer.className = mode === 'list' ? 'view-list' : 'view-grid';
+  state.focusedIndex = -1;
+  renderOpportunities(state.items);
+}
+
+// Smooth Number Counter Animation
+function animateValue(el, end, duration = 350) {
+  if (!el) return;
+  const target = parseInt(end, 10);
+  if (isNaN(target)) {
+    el.textContent = end;
+    return;
+  }
+  const start = parseInt(el.textContent.replace(/[^0-9]/g, ''), 10) || 0;
+  if (start === target) {
+    el.textContent = target;
+    return;
+  }
+  const startTime = performance.now();
+  function step(now) {
+    const elapsed = now - startTime;
+    const progress = Math.min(elapsed / duration, 1);
+    const ease = 1 - Math.pow(1 - progress, 3);
+    el.textContent = Math.round(start + (target - start) * ease);
+    if (progress < 1) {
+      requestAnimationFrame(step);
+    } else {
+      el.textContent = target;
+    }
+  }
+  requestAnimationFrame(step);
+}
+
+// Fetch stats ribbon with smooth counting
+async function loadStats() {
+  try {
+    const res = await fetch('/api/stats');
+    if (!res.ok) return;
+    const stats = await res.json();
+    animateValue(statTotal, stats.total || 0);
+    animateValue(statHackathons, stats.hackathons || 0);
+    animateValue(statCaseStudies, stats.case_studies || 0);
+    if (statStrategy) animateValue(statStrategy, stats.strategy || 0);
+    if (statMarketing) animateValue(statMarketing, stats.marketing || 0);
+    animateValue(statBookmarks, stats.bookmarks || 0);
+    if (headerLiveStatus) {
+      headerLiveStatus.textContent = `${stats.total || 0} Live Listings`;
+    }
+  } catch (err) {
+    console.error('Stats error:', err);
+  }
+}
+
+// Fetch opportunities
+async function fetchOpportunities() {
+  opportunitiesContainer.style.opacity = '0.4';
+
+  const params = new URLSearchParams({
+    source: state.source,
+    category: state.category,
+    query: state.query,
+    sort: state.sort,
+    bookmarked: state.savedOnly,
+    urgent: state.urgentOnly,
+    high_prize: state.highPrizeOnly
+  });
+
+  try {
+    const res = await fetch(`/api/opportunities?${params.toString()}`);
+    const data = await res.json();
+    state.items = data.opportunities || [];
+    state.focusedIndex = -1;
+    state.lastFetchTime = Date.now();
+    renderOpportunities(state.items);
+    animateValue(resultsCount, state.items.length);
+    resultsCount.textContent = `Showing ${state.items.length} opportunities`;
+    updateLiveTickers();
+  } catch (err) {
+    console.error('Fetch error:', err);
+    showToast('Failed to load competitions.');
+  } finally {
+    opportunitiesContainer.style.opacity = '1';
+  }
+}
+
+// Live Real-Time Activity and Countdown Tickers
+function startLiveTickers() {
+  updateLiveTickers();
+  setInterval(updateLiveTickers, 1000);
+}
+
+function updateLiveTickers() {
+  // 1. Elapsed time since last fetch
+  if (lastScrapedText && state.lastFetchTime) {
+    const sec = Math.floor((Date.now() - state.lastFetchTime) / 1000);
+    if (sec < 5) {
+      lastScrapedText.textContent = 'Synced just now • Live';
+    } else if (sec < 60) {
+      lastScrapedText.textContent = `Synced ${sec}s ago • Live`;
+    } else {
+      const mins = Math.floor(sec / 60);
+      lastScrapedText.textContent = `Synced ${mins}m ago • Live`;
+    }
+  }
+
+  // 2. Real-time countdown for nearest closing deadline
+  if (liveDeadlineTicker && state.items && state.items.length > 0) {
+    const valid = state.items.filter(x => x.days_left_num !== undefined && x.days_left_num >= 0);
+    if (valid.length > 0) {
+      const nearest = valid.reduce((min, curr) => curr.days_left_num < min.days_left_num ? curr : min, valid[0]);
+      const days = nearest.days_left_num;
+      const now = new Date();
+      const secondsLeftInDay = 86400 - (now.getHours() * 3600 + now.getMinutes() * 60 + now.getSeconds());
+      const hours = Math.floor(secondsLeftInDay / 3600);
+      const mins = Math.floor((secondsLeftInDay % 3600) / 60);
+      const secs = secondsLeftInDay % 60;
+      
+      const pad = (n) => String(n).padStart(2, '0');
+      const timeStr = `${days}d ${pad(hours)}h ${pad(mins)}m ${pad(secs)}s`;
+      const shortTitle = nearest.title.length > 24 ? nearest.title.slice(0, 22) + '...' : nearest.title;
+      liveDeadlineTicker.textContent = `Next Closing: ${shortTitle} in ${timeStr}`;
+    } else {
+      liveDeadlineTicker.textContent = 'All listings current & monitored';
+    }
+  }
+}
+
+// Render Table vs Grid
+function renderOpportunities(items) {
+  opportunitiesContainer.innerHTML = '';
+
+  if (items.length === 0) {
+    emptyState.classList.remove('hidden');
+    return;
+  }
+  emptyState.classList.add('hidden');
+
+  if (state.viewMode === 'list') {
+    renderListView(items);
+  } else {
+    renderGridView(items);
+  }
+}
+
+// High-Density Data Table View with Clickable Sorting
+function renderListView(items) {
+  const header = document.createElement('div');
+  header.className = 'list-table-header';
+
+  const deadlineSortArrow = state.sort === 'deadline' ? ' &uarr;' : (state.sort === 'deadline_desc' ? ' &darr;' : '');
+  const prizeSortArrow = state.sort === 'prize' ? ' &uarr;' : '';
+  const titleSortArrow = state.sort === 'title' ? ' &uarr;' : '';
+
+  header.innerHTML = `
+    <span class="th-sortable ${state.sort === 'title' ? 'active-sort' : ''}" data-sort-field="title">
+      Opportunity / Host ${titleSortArrow}
+    </span>
+    <span>Track</span>
+    <span>Source</span>
+    <span class="th-sortable ${state.sort.startsWith('deadline') ? 'active-sort' : ''}" data-sort-field="deadline">
+      Deadline ${deadlineSortArrow}
+    </span>
+    <span class="th-sortable ${state.sort === 'prize' ? 'active-sort' : ''}" data-sort-field="prize">
+      Reward ${prizeSortArrow}
+    </span>
+    <span style="text-align: right;">Action</span>
+  `;
+
+  // Hook sorting click on headers
+  header.querySelectorAll('.th-sortable').forEach(th => {
+    th.addEventListener('click', () => {
+      const field = th.dataset.sortField;
+      if (field === 'deadline') {
+        state.sort = state.sort === 'deadline' ? 'deadline_desc' : 'deadline';
+      } else if (field === 'prize') {
+        state.sort = state.sort === 'prize' ? 'deadline' : 'prize';
+      } else if (field === 'title') {
+        state.sort = state.sort === 'title' ? 'deadline' : 'title';
+      }
+      sortSelect.value = state.sort.startsWith('deadline') ? 'deadline' : state.sort;
+      fetchOpportunities();
+    });
+  });
+
+  opportunitiesContainer.appendChild(header);
+
+  items.forEach((opp, index) => {
+    const row = document.createElement('div');
+    row.className = 'table-row';
+    row.dataset.index = index;
+    row.style.setProperty('--i', Math.min(index, 20));
+
+    const isUrgent = opp.days_left_num !== undefined && opp.days_left_num >= 0 && opp.days_left_num <= 3;
+    const isBookmarked = !!opp.is_bookmarked;
+    const trackBadgeHtml = getTrackBadgeHtml(opp.category);
+    const sourceHtml = getSourceBadge(opp.source);
+    const deadlineHtml = getDeadlineBadge(opp);
+    const rewardHtml = getRewardBadge(opp.prize);
+    const stageTagHtml = getStageTagHtml(opp.application_status);
+    const avatarHtml = getOrganizerAvatarHtml(opp.organizer, opp.category);
+
+    row.innerHTML = `
+      <div class="col-primary">
+        ${avatarHtml}
+        <div class="primary-text-wrap">
+          <div class="row-title" title="${escapeHtml(opp.title)}">
+            ${escapeHtml(opp.title)}
+            ${stageTagHtml}
+          </div>
+          <div class="row-org">
+            <span class="status-dot ${isUrgent ? 'urgent' : 'normal'}"></span>
+            <span>${escapeHtml(opp.organizer)} &bull; ${escapeHtml(opp.location || 'Online')}</span>
+          </div>
+        </div>
+      </div>
+      <div>
+        ${trackBadgeHtml}
+      </div>
+      <div>
+        ${sourceHtml}
+      </div>
+      <div class="countdown-cell">
+        ${deadlineHtml}
+      </div>
+      <div class="reward-cell">
+        ${rewardHtml}
+      </div>
+      <div class="row-actions">
+        <button class="btn-icon-subtle bookmark-btn ${isBookmarked ? 'bookmarked' : ''}" title="${isBookmarked ? 'Saved (Press s)' : 'Save (Press s)'}">
+          ${isBookmarked ? '★' : '☆'}
+        </button>
+        <button class="btn-icon-subtle share-wa-btn" title="Copy for WhatsApp (Press w)">
+          💬
+        </button>
+        <a href="${opp.url}" target="_blank" rel="noopener noreferrer" class="btn-icon-subtle" title="Open Page ↗ (Press o)" onclick="event.stopPropagation();">
+          ↗
+        </a>
+      </div>
+    `;
+
+    // Row click opens inspection drawer
+    row.addEventListener('click', () => {
+      setFocusRow(index);
+      openDrawer(opp);
+    });
+
+    // Bookmark handler
+    const bBtn = row.querySelector('.bookmark-btn');
+    bBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      toggleBookmark(opp.id);
+    });
+
+    // WhatsApp quick share
+    const waBtn = row.querySelector('.share-wa-btn');
+    waBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      copyWhatsAppSummary(opp);
+    });
+
+    opportunitiesContainer.appendChild(row);
+  });
+}
+
+// Precision Grid View
+function renderGridView(items) {
+  items.forEach((opp, index) => {
+    const card = document.createElement('div');
+    card.className = 'grid-card';
+    card.dataset.index = index;
+    card.style.setProperty('--i', Math.min(index, 20));
+
+    const isUrgent = opp.days_left_num !== undefined && opp.days_left_num >= 0 && opp.days_left_num <= 3;
+    const isBookmarked = !!opp.is_bookmarked;
+    const sourceHtml = getSourceBadge(opp.source);
+    const deadlineHtml = getDeadlineBadge(opp);
+    const rewardHtml = getRewardBadge(opp.prize);
+    const stageTagHtml = getStageTagHtml(opp.application_status);
+    const trackBadgeHtml = getTrackBadgeHtml(opp.category);
+    const avatarHtml = getOrganizerAvatarHtml(opp.organizer, opp.category);
+
+    const tagsHtml = (opp.tags || [])
+      .slice(0, 3)
+      .map(t => `<span class="pill-track track-default">${escapeHtml(t)}</span>`)
+      .join('');
+
+    card.innerHTML = `
+      <div>
+        <div class="card-top-meta">
+          <div class="card-header-cluster">
+            ${avatarHtml}
+            <div style="display: flex; align-items: center; gap: 0.4rem;">
+              ${sourceHtml}
+              ${stageTagHtml}
+            </div>
+          </div>
+          <button class="btn-icon-subtle bookmark-btn ${isBookmarked ? 'bookmarked' : ''}" title="${isBookmarked ? 'Saved' : 'Save'}">
+            ${isBookmarked ? '★' : '☆'}
+          </button>
+        </div>
+
+        <h3 class="card-title-text" title="${escapeHtml(opp.title)}">${escapeHtml(opp.title)}</h3>
+        <p class="card-org-text">
+          <span class="status-dot ${isUrgent ? 'urgent' : 'normal'}"></span>
+          <span>${escapeHtml(opp.organizer)} &bull; ${escapeHtml(opp.location || 'Online')}</span>
+        </p>
+
+        <div style="margin-bottom: 0.85rem;">
+          ${trackBadgeHtml}
+        </div>
+
+        <div class="card-data-strip">
+          <div>
+            <div class="data-box-label">Deadline</div>
+            <div class="data-box-val">${deadlineHtml}</div>
+          </div>
+          <div>
+            <div class="data-box-label">Reward</div>
+            <div class="data-box-val">${rewardHtml}</div>
+          </div>
+        </div>
+
+        <div class="card-tags-cloud">
+          ${tagsHtml}
+        </div>
+      </div>
+
+      <div class="card-footer-strip">
+        <button class="btn-icon-subtle share-wa-btn" title="Copy for WhatsApp" onclick="event.stopPropagation();">
+          💬
+        </button>
+        <a href="${opp.url}" target="_blank" rel="noopener noreferrer" class="apply-button-direct" onclick="event.stopPropagation();">
+          Open Official Portal ↗
+        </a>
+      </div>
+    `;
+
+    card.addEventListener('click', () => {
+      setFocusRow(index);
+      openDrawer(opp);
+    });
+
+    const bBtn = card.querySelector('.bookmark-btn');
+    bBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      toggleBookmark(opp.id);
+    });
+
+    const waBtn = card.querySelector('.share-wa-btn');
+    waBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      copyWhatsAppSummary(opp);
+    });
+
+    opportunitiesContainer.appendChild(card);
+  });
+}
+
+// Visual helpers for Ultra-Elevated Design
+function getTrackClass(category) {
+  const c = (category || '').toLowerCase();
+  if (c.includes('strategy') || c.includes('consulting')) return 'track-strategy';
+  if (c.includes('marketing') || c.includes('brand')) return 'track-marketing';
+  if (c.includes('hackathon') || c.includes('code')) return 'track-tech';
+  if (c.includes('case')) return 'track-case';
+  if (c.includes('operation') || c.includes('supply')) return 'track-ops';
+  return 'track-default';
+}
+
+function getTrackBadgeHtml(category) {
+  const cls = getTrackClass(category);
+  let iconSvg = '';
+  if (cls === 'track-strategy') {
+    iconSvg = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>`;
+  } else if (cls === 'track-marketing') {
+    iconSvg = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>`;
+  } else if (cls === 'track-tech') {
+    iconSvg = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>`;
+  } else if (cls === 'track-case') {
+    iconSvg = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>`;
+  } else if (cls === 'track-ops') {
+    iconSvg = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>`;
+  }
+  return `<span class="pill-track">${iconSvg}${escapeHtml(category)}</span>`;
+}
+
+function getOrganizerAvatarHtml(organizer, category) {
+  const org = (organizer || 'Opp').trim();
+  let mono = '';
+  const upper = org.toUpperCase();
+
+  if (upper.includes('IIM BANGALORE') || upper.includes('IIMB')) mono = 'IIMB';
+  else if (upper.includes('IIM AHMEDABAD') || upper.includes('IIMA')) mono = 'IIMA';
+  else if (upper.includes('IIM CALCUTTA') || upper.includes('IIMC')) mono = 'IIMC';
+  else if (upper.includes('XLRI')) mono = 'XLRI';
+  else if (upper.includes('FMS')) mono = 'FMS';
+  else if (upper.includes('IIT')) mono = 'IIT';
+  else if (upper.includes('DEVPOST')) mono = 'DEV';
+  else if (upper.includes('UNSTOP')) mono = 'UNS';
+  else if (upper.includes('MICROSOFT')) mono = 'MSFT';
+  else if (upper.includes('GOOGLE')) mono = 'GOOG';
+  else {
+    const parts = org.split(/\s+/).filter(Boolean);
+    if (parts.length >= 2) {
+      mono = (parts[0][0] + parts[1][0]).toUpperCase();
+    } else {
+      mono = org.slice(0, 3).toUpperCase();
+    }
+  }
+
+  return `<div class="org-avatar">${escapeHtml(mono)}</div>`;
+}
+
+function getDeadlineBadge(opp) {
+  const d = opp.days_left_num;
+  const label = opp.days_left || opp.deadline || 'Ongoing';
+
+  if (d !== undefined && d >= 0 && d <= 3) {
+    return `<span class="deadline-pill urgent"><span class="status-dot-sm urgent"></span>${escapeHtml(label)}</span>`;
+  }
+  if (d !== undefined && d >= 0 && d <= 7) {
+    return `<span class="deadline-pill warning"><span class="status-dot-sm warning"></span>${escapeHtml(label)}</span>`;
+  }
+  return `<span class="deadline-pill standard">${escapeHtml(label)}</span>`;
+}
+
+function getRewardBadge(prize) {
+  const p = prize || 'Awards & Certificates';
+  const isCash = p.includes('₹') || p.includes('$') || p.toLowerCase().includes('lakh') || p.toLowerCase().includes('crore');
+  if (isCash) {
+    return `<span class="reward-tag cash" title="${escapeHtml(p)}">${escapeHtml(p)}</span>`;
+  }
+  return `<span class="reward-tag normal" title="${escapeHtml(p)}">${escapeHtml(p)}</span>`;
+}
+
+function getSourceBadge(source) {
+  const s = (source || '').toLowerCase();
+  let label = source;
+  if (s.includes('unstop')) label = 'Unstop';
+  else if (s.includes('devpost')) label = 'Devpost';
+  else if (s.includes('curated')) label = 'Curated Feed';
+  return `<span class="src-pill"><span class="src-dot"></span>${escapeHtml(label)}</span>`;
+}
+
+// Stage tag helper
+function getStageTagHtml(status) {
+  if (!status || status === 'None') return '';
+  const clean = status.toLowerCase();
+  return `<span class="stage-tag ${clean}">${escapeHtml(status)}</span>`;
+}
+
+// Keyboard navigation row focus
+function moveFocus(delta) {
+  if (state.items.length === 0) return;
+  let newIdx = state.focusedIndex + delta;
+  if (newIdx < 0) newIdx = 0;
+  if (newIdx >= state.items.length) newIdx = state.items.length - 1;
+  setFocusRow(newIdx);
+}
+
+function setFocusRow(index) {
+  state.focusedIndex = index;
+  const elements = opportunitiesContainer.querySelectorAll('.table-row, .grid-card');
+  elements.forEach((el, idx) => {
+    if (idx === index) {
+      el.classList.add('kb-focused');
+      el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    } else {
+      el.classList.remove('kb-focused');
+    }
+  });
+}
+
+// Helper: Source class
+function getSourceClass(source) {
+  const s = (source || '').toLowerCase();
+  if (s.includes('unstop')) return 'unstop';
+  if (s.includes('devpost')) return 'devpost';
+  if (s.includes('curated')) return 'curated';
+  return '';
+}
+
+// Open Details Drawer
+function openDrawer(opp) {
+  state.selectedItem = opp;
+
+  drawerTitle.textContent = opp.title;
+  drawerOrganizer.textContent = `${opp.organizer} (${opp.location || 'Online'})`;
+  drawerDeadline.textContent = `${opp.days_left || 'Ongoing'} (${opp.deadline || 'No date specified'})`;
+  drawerPrize.textContent = opp.prize || 'Awards & Certificates';
+  drawerLocation.textContent = opp.location || 'Online National';
+  drawerSource.textContent = opp.source;
+  drawerApplyLink.href = opp.url;
+
+  const drawerAvatar = document.getElementById('drawerAvatarContainer');
+  if (drawerAvatar) {
+    drawerAvatar.innerHTML = getOrganizerAvatarHtml(opp.organizer, opp.category);
+  }
+
+  drawerBadges.innerHTML = `
+    ${getTrackBadgeHtml(opp.category)}
+    ${getSourceBadge(opp.source)}
+  `;
+
+  drawerTags.innerHTML = (opp.tags || [])
+    .map(t => `<span class="pill-track track-default">${escapeHtml(t)}</span>`)
+    .join('');
+
+  // Set active stage in drawer
+  const curStage = opp.application_status || 'None';
+  drawerStageControl.querySelectorAll('.stage-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.stage === curStage);
+  });
+
+  drawerCopyBtn.onclick = () => copyUrl(opp.url);
+  drawerShareBtn.onclick = () => copyWhatsAppSummary(opp);
+
+  detailsDrawerBackdrop.classList.remove('hidden');
+  detailsDrawer.classList.remove('hidden');
+}
+
+function closeDrawer() {
+  detailsDrawerBackdrop.classList.add('hidden');
+  detailsDrawer.classList.add('hidden');
+  state.selectedItem = null;
+}
+
+// Application Stage update
+async function updateItemStage(id, newStage) {
+  try {
+    const res = await fetch('/api/status', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id, status: newStage })
+    });
+    const data = await res.json();
+    
+    // Update local state item
+    const item = state.items.find(x => x.id === id);
+    if (item) {
+      item.application_status = data.application_status;
+    }
+    if (state.selectedItem && state.selectedItem.id === id) {
+      state.selectedItem.application_status = data.application_status;
+      drawerStageControl.querySelectorAll('.stage-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.stage === data.application_status);
+      });
+    }
+    renderOpportunities(state.items);
+    if (state.focusedIndex >= 0) setFocusRow(state.focusedIndex);
+    showToast(`Stage updated to: ${newStage}`);
+  } catch (err) {
+    console.error('Stage update error:', err);
+  }
+}
+
+// Formatted WhatsApp text copy
+function copyWhatsAppSummary(opp) {
+  const text = `🎯 *${opp.title}*
+🏛 *Host:* ${opp.organizer} (${opp.location || 'Online'})
+⏳ *Deadline:* ${opp.days_left || opp.deadline || 'Ongoing'}
+🏆 *Reward:* ${opp.prize || 'Certificates & Awards'}
+📁 *Track:* ${opp.category}
+🔗 *Apply here:* ${opp.url}`;
+
+  navigator.clipboard.writeText(text).then(() => {
+    showToast('Copied WhatsApp-formatted message!');
+  });
+}
+
+function copyUrl(url) {
+  navigator.clipboard.writeText(url).then(() => {
+    showToast('Link copied to clipboard!');
+  });
+}
+
+// Trigger Live Scrape
+async function triggerScrape() {
+  if (state.isScraping) return;
+  state.isScraping = true;
+  scrapeBtn.disabled = true;
+  scrapeProgress.classList.remove('hidden');
+
+  try {
+    const payload = {
+      category: state.category,
+      query: state.query || undefined,
+      limit: 30
+    };
+
+    const res = await fetch('/api/scrape', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+
+    const data = await res.json();
+    showToast(`Aggregated ${data.scraped_count || 0} competitions!`);
+    await loadStats();
+    await fetchOpportunities();
+  } catch (err) {
+    console.error('Scrape error:', err);
+    showToast('Error syncing scrapers. Check terminal.');
+  } finally {
+    state.isScraping = false;
+    scrapeBtn.disabled = false;
+    scrapeProgress.classList.add('hidden');
+  }
+}
+
+// Toggle Bookmark
+async function toggleBookmark(id) {
+  try {
+    const res = await fetch('/api/bookmark', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id })
+    });
+    const data = await res.json();
+    const isSaved = data.is_bookmarked;
+
+    const item = state.items.find(x => x.id === id);
+    if (item) item.is_bookmarked = isSaved;
+
+    renderOpportunities(state.items);
+    if (state.focusedIndex >= 0) setFocusRow(state.focusedIndex);
+
+    showToast(isSaved ? '★ Saved to bookmarks (Press s)' : '☆ Removed from bookmarks');
+    await loadStats();
+
+    if (state.savedOnly) {
+      fetchOpportunities();
+    }
+  } catch (err) {
+    console.error('Bookmark error:', err);
+  }
+}
+
+// Export Downloader
+function downloadExport(format) {
+  const params = new URLSearchParams({
+    format,
+    source: state.source,
+    category: state.category,
+    query: state.query,
+    bookmarked: state.savedOnly,
+    urgent: state.urgentOnly,
+    high_prize: state.highPrizeOnly
+  });
+  window.location.href = `/api/export?${params.toString()}`;
+  showToast(`Exporting data as ${format.toUpperCase()}...`);
+}
+
+// Toast
+let toastTimer;
+function showToast(msg) {
+  toastEl.textContent = msg;
+  toastEl.classList.remove('hidden');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => {
+    toastEl.classList.add('hidden');
+  }, 2300);
+}
+
+// HTML Escaper
+function escapeHtml(text) {
+  if (!text) return '';
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+}

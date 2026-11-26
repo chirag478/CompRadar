@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CompRadar &mdash; Competition Radar & Intelligence</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="theme-dark">
+  <!-- Top App Navigation -->
+  <header class="app-header">
+    <div class="header-inner">
+      <div class="brand-cluster">
+        <a href="/" class="brand-logo">
+          <div class="logo-badge">
+            <svg class="logo-mark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="9"/>
+              <circle cx="12" cy="12" r="4"/>
+              <path d="M12 3v3M12 18v3M3 12h3M18 12h3" stroke-linecap="round"/>
+            </svg>
+          </div>
+          <div class="brand-text-wrap">
+            <span class="brand-name">CompRadar</span>
+            <span class="brand-subline">Radar & Intelligence</span>
+          </div>
+        </a>
+        <div class="live-status-pill">
+          <span class="live-dot"></span>
+          <span id="headerLiveStatus">Radar Active</span>
+        </div>
+      </div>
+
+      <div class="header-right-actions">
+        <button id="importModalBtn" class="btn btn-ghost" title="Import from CSV">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" class="icon-sm">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          <span>Import CSV</span>
+        </button>
+
+        <div class="export-dropdown-wrapper">
+          <button id="exportBtn" class="btn btn-ghost">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" class="icon-sm">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <span>Export</span>
+          </button>
+          <div id="exportMenu" class="dropdown-popover hidden">
+            <button class="dropdown-item" id="exportCsv">Export as CSV (.csv)</button>
+            <button class="dropdown-item" id="exportJson">Export as JSON (.json)</button>
+          </div>
+        </div>
+
+        <button id="scrapeBtn" class="btn btn-accent">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-sm rotate-on-scrape">
+            <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          <span>Sync Scrapers</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content Layout -->
+  <main class="app-layout">
+    <!-- Clean Minimalist Analytics Ribbon -->
+    <section class="metrics-ribbon">
+      <div class="metric-segment">
+        <span class="metric-num" id="statTotal">--</span>
+        <span class="metric-meta">Active Listings</span>
+      </div>
+      <div class="ribbon-divider"></div>
+      <div class="metric-segment">
+        <span class="metric-num" id="statHackathons">--</span>
+        <span class="metric-meta">Tech Hackathons</span>
+      </div>
+      <div class="ribbon-divider"></div>
+      <div class="metric-segment">
+        <span class="metric-num" id="statCaseStudies">--</span>
+        <span class="metric-meta">Product Cases</span>
+      </div>
+      <div class="ribbon-divider"></div>
+      <div class="metric-segment">
+        <span class="metric-num" id="statStrategy">--</span>
+        <span class="metric-meta">Strategy & Consulting</span>
+      </div>
+      <div class="ribbon-divider"></div>
+      <div class="metric-segment">
+        <span class="metric-num" id="statMarketing">--</span>
+        <span class="metric-meta">Marketing & Growth</span>
+      </div>
+      <div class="ribbon-divider"></div>
+      <div class="metric-segment">
+        <span class="metric-num" id="statBookmarks">0</span>
+        <span class="metric-meta">Bookmarked</span>
+      </div>
+    </section>
+
+    <!-- Toolbar: Search, Segmented Controls, and Layout Mode -->
+    <section class="command-bar">
+      <!-- Search input -->
+      <div class="search-input-shell">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="search-icon">
+          <circle cx="11" cy="11" r="8"></circle>
+          <path d="m21 21-4.35-4.35"></path>
+        </svg>
+        <input type="text" id="searchInput" placeholder="Search competitions by title, institute (IIM, XLRI, IIT), keywords (AI, Growth, Supply Chain)..." autocomplete="off" spellcheck="false">
+        <span class="search-kbd-hint">/</span>
+        <button id="clearSearch" class="search-clear-btn hidden" title="Clear search">&times;</button>
+      </div>
+
+      <!-- View & Sort Controls -->
+      <div class="toolbar-side-actions">
+        <div class="view-toggle-group">
+          <button id="viewListBtn" class="view-btn active" title="Dense Table / List View">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-sm">
+              <line x1="8" y1="6" x2="21" y2="6"></line>
+              <line x1="8" y1="12" x2="21" y2="12"></line>
+              <line x1="8" y1="18" x2="21" y2="18"></line>
+              <line x1="3" y1="6" x2="3.01" y2="6"></line>
+              <line x1="3" y1="12" x2="3.01" y2="12"></line>
+              <line x1="3" y1="18" x2="3.01" y2="18"></line>
+            </svg>
+            <span>Table</span>
+          </button>
+          <button id="viewGridBtn" class="view-btn" title="Card Grid View">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-sm">
+              <rect x="3" y="3" width="7" height="7"></rect>
+              <rect x="14" y="3" width="7" height="7"></rect>
+              <rect x="14" y="14" width="7" height="7"></rect>
+              <rect x="3" y="14" width="7" height="7"></rect>
+            </svg>
+            <span>Cards</span>
+          </button>
+        </div>
+
+        <div class="sort-wrapper">
+          <select id="sortSelect" class="clean-select">
+            <option value="deadline">Sort: Deadline (Urgent First)</option>
+            <option value="newest">Sort: Recently Added</option>
+            <option value="prize">Sort: Highest Prize Pool</option>
+          </select>
+        </div>
+      </div>
+    </section>
+
+    <!-- Source and Category Filter Bar -->
+    <section class="filters-dock">
+      <!-- Source tabs -->
+      <div class="source-segmented-tabs">
+        <button class="source-tab active" data-source="all">All Sources</button>
+        <button class="source-tab" data-source="unstop">Unstop</button>
+        <button class="source-tab" data-source="devpost">Devpost</button>
+        <button class="source-tab" data-source="curated">Curated Feed</button>
+      </div>
+
+      <div class="filter-separator"></div>
+
+      <!-- Category Filter Chips with Icons -->
+      <div class="category-chips-scroll">
+        <button class="chip active" data-category="all">All Tracks</button>
+        <button class="chip" data-category="hackathons">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-xs">
+            <polyline points="16 18 22 12 16 6"></polyline>
+            <polyline points="8 6 2 12 8 18"></polyline>
+          </svg>
+          <span>Tech Hackathons</span>
+        </button>
+        <button class="chip" data-category="case_study">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-xs">
+            <rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect>
+            <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path>
+          </svg>
+          <span>Product Cases</span>
+        </button>
+        <button class="chip" data-category="strategy">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-xs">
+            <circle cx="12" cy="12" r="10"></circle>
+            <circle cx="12" cy="12" r="6"></circle>
+            <circle cx="12" cy="12" r="2"></circle>
+          </svg>
+          <span>Strategy</span>
+        </button>
+        <button class="chip" data-category="marketing">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-xs">
+            <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+          </svg>
+          <span>Marketing</span>
+        </button>
+        <button class="chip" data-category="product">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-xs">
+            <polygon points="12 2 2 7 12 12 22 7 12 2"></polygon>
+            <polyline points="2 17 12 22 22 17"></polyline>
+            <polyline points="2 12 12 17 22 12"></polyline>
+          </svg>
+          <span>Product Mgmt</span>
+        </button>
+        <button class="chip" data-category="hiring">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-xs">
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+            <circle cx="12" cy="7" r="4"></circle>
+          </svg>
+          <span>Hiring Challenges</span>
+        </button>
+        <button id="savedFilterBtn" class="chip chip-saved" data-active="false">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-xs">
+            <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+          </svg>
+          <span>Saved</span>
+        </button>
+
+        <div class="filter-separator"></div>
+
+        <!-- Quick UX Presets -->
+        <button id="filterUrgentBtn" class="chip chip-preset" data-active="false" title="Filter competitions closing in 3 days or less">
+          <span class="preset-dot rose"></span>
+          <span>&le; 3 Days Left</span>
+        </button>
+        <button id="filterHighPrizeBtn" class="chip chip-preset" data-active="false" title="Filter competitions with major cash prizes">
+          <span class="preset-dot amber"></span>
+          <span>High Rewards</span>
+        </button>
+      </div>
+    </section>
+
+    <!-- Live Scrape Status Banner -->
+    <div id="scrapeProgress" class="sync-banner hidden">
+      <div class="sync-spinner"></div>
+      <div class="sync-label">
+        <span class="sync-title">Aggregating live competitions...</span>
+        <span class="sync-sub">Querying Unstop API, Devpost listings, and local curated feeds</span>
+      </div>
+    </div>
+
+    <!-- Active Count & Live Radar Strip -->
+    <div class="results-action-strip">
+      <div class="results-left">
+        <span id="resultsCount" class="results-count-text">Showing -- opportunities</span>
+      </div>
+      <div class="results-center">
+        <div class="live-ticker-badge" id="liveTickerBadge">
+          <span class="ticker-pulse-dot"></span>
+          <span id="liveDeadlineTicker">Calculating nearest deadline...</span>
+        </div>
+      </div>
+      <div class="results-right">
+        <span id="lastScrapedText" class="sync-time-text">Updated just now</span>
+      </div>
+    </div>
+
+    <!-- Container for Opportunities (List or Grid) -->
+    <div id="opportunitiesContainer" class="view-list">
+      <!-- Injected by JavaScript -->
+    </div>
+
+    <!-- Empty State -->
+    <div id="emptyState" class="empty-state-card hidden">
+      <div class="empty-state-symbol">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <circle cx="11" cy="11" r="8"></circle>
+          <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+        </svg>
+      </div>
+      <h4>No matching competitions found</h4>
+      <p>Try widening your search terms or sync the scrapers to fetch newly announced listings.</p>
+      <button id="emptyScrapeBtn" class="btn btn-outline" style="margin-top: 1rem;">Sync Scrapers Now</button>
+    </div>
+  </main>
+
+  <!-- Slide-Over Inspection Drawer for Deep Dive -->
+  <div id="detailsDrawerBackdrop" class="drawer-backdrop hidden"></div>
+  <aside id="detailsDrawer" class="details-drawer hidden">
+    <div class="drawer-header">
+      <div class="drawer-badges" id="drawerBadges"></div>
+      <button id="closeDrawerBtn" class="btn-icon-subtle" title="Close Drawer">&times;</button>
+    </div>
+    <div class="drawer-body">
+      <div class="drawer-hero">
+        <div id="drawerAvatarContainer"></div>
+        <div>
+          <h2 id="drawerTitle" class="drawer-title">Competition Title</h2>
+          <p id="drawerOrganizer" class="drawer-organizer">Organizer Institute</p>
+        </div>
+      </div>
+
+      <div class="drawer-meta-grid">
+        <div class="meta-box">
+          <span class="meta-label">Deadline & Urgency</span>
+          <span id="drawerDeadline" class="meta-value">--</span>
+        </div>
+        <div class="meta-box">
+          <span class="meta-label">Prize Pool / Reward</span>
+          <span id="drawerPrize" class="meta-value highlight">--</span>
+        </div>
+        <div class="meta-box">
+          <span class="meta-label">Location / Mode</span>
+          <span id="drawerLocation" class="meta-value">Online</span>
+        </div>
+        <div class="meta-box">
+          <span class="meta-label">Source Platform</span>
+          <span id="drawerSource" class="meta-value">--</span>
+        </div>
+      </div>
+
+      <div class="drawer-section">
+        <h4>My Tracking Stage</h4>
+        <div class="stage-segmented-control" id="drawerStageControl">
+          <button class="stage-btn active" data-stage="None">Not Applied</button>
+          <button class="stage-btn" data-stage="Interested">Interested</button>
+          <button class="stage-btn" data-stage="Applied">Applied</button>
+          <button class="stage-btn" data-stage="Shortlisted">Shortlisted</button>
+        </div>
+      </div>
+
+      <div class="drawer-section">
+        <h4>Tags & Eligibility</h4>
+        <div id="drawerTags" class="drawer-tags-list"></div>
+      </div>
+
+      <div class="drawer-actions">
+        <a id="drawerApplyLink" href="#" target="_blank" rel="noopener noreferrer" class="btn btn-accent btn-block">
+          Open Official Portal ↗
+        </a>
+        <div class="drawer-dual-btn-row">
+          <button id="drawerCopyBtn" class="btn btn-outline" style="flex: 1;">
+            Copy Link
+          </button>
+          <button id="drawerShareBtn" class="btn btn-outline" style="flex: 1;" title="Copy clean formatted summary ready for WhatsApp or Slack">
+            Copy for WhatsApp
+          </button>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Import CSV Modal -->
+  <div id="importModal" class="modal-overlay hidden">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <div>
+          <h3>Import Competitions from CSV</h3>
+          <p class="modal-sub">Add custom spreadsheets or college competition lists directly into the directory</p>
+        </div>
+        <button id="closeModalBtn" class="modal-close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="upload-trigger-zone">
+          <input type="file" id="csvFileInput" accept=".csv" class="file-input-hidden">
+          <label for="csvFileInput" class="file-drop-card">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" class="icon-md">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/>
+            </svg>
+            <span>Choose a <strong>.csv</strong> file or drag & drop</span>
+          </label>
+        </div>
+        <div class="modal-divider"><span>OR PASTE RAW CSV</span></div>
+        <textarea id="csvTextInput" rows="7" placeholder="Competition / event,Application opens on,Last date to register ,Bengaluru connection,Format / rounds,Key dates,First-year PG eligibility,Team size,Registration status,Apply / official details,Evidence / notes,Source..."></textarea>
+      </div>
+      <div class="modal-footer">
+        <button id="cancelModalBtn" class="btn btn-ghost">Cancel</button>
+        <button id="submitImportBtn" class="btn btn-accent">Ingest & Save Opportunities</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Floating Command Navigation Dock (Linear / Raycast style) -->
+  <div class="floating-command-dock" id="floatingCommandDock">
+    <div class="cmd-pill-item">
+      <kbd>J</kbd><kbd>K</kbd> <span>Navigate</span>
+    </div>
+    <div class="cmd-divider"></div>
+    <div class="cmd-pill-item">
+      <kbd>Space</kbd> <span>Inspect</span>
+    </div>
+    <div class="cmd-divider"></div>
+    <div class="cmd-pill-item">
+      <kbd>S</kbd> <span>Star</span>
+    </div>
+    <div class="cmd-divider"></div>
+    <div class="cmd-pill-item">
+      <kbd>W</kbd> <span>WhatsApp</span>
+    </div>
+    <div class="cmd-divider"></div>
+    <div class="cmd-pill-item">
+      <kbd>O</kbd> <span>Open</span>
+    </div>
+    <div class="cmd-divider"></div>
+    <div class="cmd-pill-item">
+      <kbd>/</kbd> <span>Search</span>
+    </div>
+  </div>
+
+  <!-- Keyboard Shortcuts Modal -->
+  <div id="shortcutsModal" class="modal-overlay hidden">
+    <div class="modal-dialog" style="max-width: 440px;">
+      <div class="modal-header">
+        <div>
+          <h3>Keyboard Navigation</h3>
+          <p class="modal-sub">Navigate the directory at lightning speed</p>
+        </div>
+        <button id="closeShortcutsBtn" class="modal-close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="shortcuts-grid">
+          <div class="shortcut-row">
+            <span>Focus Search Bar</span>
+            <kbd>/</kbd>
+          </div>
+          <div class="shortcut-row">
+            <span>Next / Previous Row</span>
+            <div><kbd>j</kbd> <kbd>k</kbd> or <kbd>&darr;</kbd> <kbd>&uarr;</kbd></div>
+          </div>
+          <div class="shortcut-row">
+            <span>Open Details Drawer</span>
+            <div><kbd>Enter</kbd> or <kbd>Space</kbd></div>
+          </div>
+          <div class="shortcut-row">
+            <span>Save / Bookmark Item</span>
+            <kbd>s</kbd>
+          </div>
+          <div class="shortcut-row">
+            <span>Copy Competition Link</span>
+            <kbd>c</kbd>
+          </div>
+          <div class="shortcut-row">
+            <span>Copy for WhatsApp</span>
+            <kbd>w</kbd>
+          </div>
+          <div class="shortcut-row">
+            <span>Open Official URL</span>
+            <kbd>o</kbd>
+          </div>
+          <div class="shortcut-row">
+            <span>Close Modal / Drawer</span>
+            <kbd>Esc</kbd>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification -->
+  <div id="toast" class="toast hidden"></div>
+
+  <!-- App Script -->
+  <script src="app.js"></script>
+</body>
+</html>
