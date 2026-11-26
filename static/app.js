@@ -1135,6 +1135,37 @@ function showToast(msg) {
 }
 
 // Register Service Worker for PWA Offline Support
+// Register Service Worker & 1-Tap PWA Install Prompt
+let deferredInstallPrompt = null;
+const installAppBtn = document.getElementById('installAppBtn');
+
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  deferredInstallPrompt = e;
+  if (installAppBtn) {
+    installAppBtn.style.display = 'inline-flex';
+    installAppBtn.classList.remove('hidden');
+  }
+});
+
+if (installAppBtn) {
+  installAppBtn.addEventListener('click', async () => {
+    if (!deferredInstallPrompt) return;
+    deferredInstallPrompt.prompt();
+    const { outcome } = await deferredInstallPrompt.userChoice;
+    deferredInstallPrompt = null;
+    installAppBtn.style.display = 'none';
+    if (outcome === 'accepted') {
+      showToast('Installing CompRadar App...');
+    }
+  });
+}
+
+window.addEventListener('appinstalled', () => {
+  deferredInstallPrompt = null;
+  if (installAppBtn) installAppBtn.style.display = 'none';
+});
+
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('/sw.js')
