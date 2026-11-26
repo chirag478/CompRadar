@@ -91,9 +91,8 @@ class ScraperHandler(BaseHTTPRequestHandler):
         with open(filepath, "rb") as f:
             content = f.read()
 
-        # Cache static assets (CSS/JS/manifest) briefly; keep HTML/SW fresh
-        is_immutable_asset = filepath.endswith((".css", ".js", ".png", ".svg", ".ico")) and not filepath.endswith("sw.js")
-        cache_header = "public, max-age=3600" if is_immutable_asset else "no-cache"
+        # Always revalidate HTML/CSS/JS/SW so mobile clients never get stale UI
+        cache_header = "no-cache"
 
         if content_type.startswith(("text/", "application/javascript", "application/json", "application/manifest+json", "image/svg+xml")):
             self._send_compressed_or_raw(content, content_type, status=200, cache_control=cache_header)
