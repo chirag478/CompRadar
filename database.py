@@ -98,7 +98,7 @@ def save_opportunities(opportunities):
     conn.close()
     return saved_count
 
-def get_opportunities(source=None, category=None, query=None, bookmarked_only=False, sort_by="deadline", include_ended=False, app_status=None, urgent_only=False, high_prize_only=False):
+def get_opportunities(source=None, category=None, query=None, bookmarked_only=False, sort_by="deadline", include_ended=False, app_status=None, urgent_only=False, high_prize_only=False, location=None):
     conn = get_connection()
     cursor = conn.cursor()
 
@@ -118,6 +118,24 @@ def get_opportunities(source=None, category=None, query=None, bookmarked_only=Fa
     if app_status and app_status.lower() != "all":
         conditions.append("LOWER(application_status) = LOWER(?)")
         params.append(app_status)
+
+    if location and location.lower() != "all":
+        loc = location.lower().strip()
+        if loc in ("bengaluru", "bangalore", "blr"):
+            conditions.append("(LOWER(location) LIKE '%bengaluru%' OR LOWER(location) LIKE '%bangalore%' OR LOWER(title) LIKE '%bengaluru%' OR LOWER(title) LIKE '%bangalore%' OR LOWER(organizer) LIKE '%bangalore%' OR LOWER(organizer) LIKE '%bengaluru%' OR LOWER(tags) LIKE '%bengaluru%')")
+        elif loc == "online":
+            conditions.append("(LOWER(location) LIKE '%online%' OR LOWER(location) LIKE '%global%' OR LOWER(location) LIKE '%remote%' OR LOWER(location) LIKE '%virtual%')")
+        elif loc == "hybrid":
+            conditions.append("(LOWER(location) LIKE '%hybrid%' OR (LOWER(location) NOT IN ('online', 'global online') AND LOWER(location) NOT LIKE 'online;%'))")
+        elif loc == "delhi":
+            conditions.append("(LOWER(location) LIKE '%delhi%' OR LOWER(location) LIKE '%gurgaon%' OR LOWER(location) LIKE '%ncr%' OR LOWER(location) LIKE '%noida%')")
+        elif loc == "mumbai":
+            conditions.append("(LOWER(location) LIKE '%mumbai%' OR LOWER(location) LIKE '%bombay%')")
+        elif loc == "hyderabad":
+            conditions.append("(LOWER(location) LIKE '%hyderabad%')")
+        else:
+            conditions.append("LOWER(location) LIKE LOWER(?)")
+            params.append(f"%{loc}%")
 
     if source and source.lower() != "all":
         src_clean = source.lower().replace("-", "").replace("_", "")

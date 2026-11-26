@@ -147,6 +147,18 @@
         </div>
 
         <div class="sort-wrapper">
+          <select id="locationSelect" class="clean-select" title="Filter by City / Mode">
+            <option value="all">Location: All Cities</option>
+            <option value="bengaluru">📍 Bengaluru (BLR)</option>
+            <option value="online">🌐 Online / Remote</option>
+            <option value="hybrid">🏛️ Hybrid / In-Person</option>
+            <option value="delhi">🏙️ Delhi NCR</option>
+            <option value="mumbai">🏙️ Mumbai</option>
+            <option value="hyderabad">🏙️ Hyderabad</option>
+          </select>
+        </div>
+
+        <div class="sort-wrapper">
           <select id="sortSelect" class="clean-select">
             <option value="deadline">Sort: Deadline (Urgent First)</option>
             <option value="newest">Sort: Recently Added</option>
@@ -226,6 +238,10 @@
         <div class="filter-separator"></div>
 
         <!-- Quick UX Presets -->
+        <button id="filterBengaluruBtn" class="chip chip-preset" data-active="false" title="Filter competitions hosted in or targeting Bengaluru (SSB)">
+          <span class="preset-dot emerald"></span>
+          <span>📍 Bengaluru</span>
+        </button>
         <button id="filterUrgentBtn" class="chip chip-preset" data-active="false" title="Filter competitions closing in 3 days or less">
           <span class="preset-dot rose"></span>
           <span>&le; 3 Days Left</span>
@@ -358,6 +374,10 @@
         <button id="closeModalBtn" class="modal-close">&times;</button>
       </div>
       <div class="modal-body">
+        <div class="admin-passkey-group">
+          <label for="importAdminToken" class="admin-passkey-label">Admin Passkey <span class="admin-passkey-hint">(Required on hosted deployments)</span></label>
+          <input type="password" id="importAdminToken" class="admin-passkey-input" placeholder="Enter COMPRADAR_ADMIN_TOKEN..." autocomplete="off">
+        </div>
         <div class="upload-trigger-zone">
           <input type="file" id="csvFileInput" accept=".csv" class="file-input-hidden">
           <label for="csvFileInput" class="file-drop-card">

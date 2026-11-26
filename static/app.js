@@ -12,6 +12,7 @@ const state = {
   category: urlParams.get('category') || 'all',
   query: urlParams.get('q') || '',
   sort: 'deadline',
+  location: urlParams.get('location') || 'all',
   savedOnly: false,
   urgentOnly: false,
   highPrizeOnly: false,
@@ -26,7 +27,9 @@ const state = {
 const searchInput = document.getElementById('searchInput');
 const clearSearch = document.getElementById('clearSearch');
 const sortSelect = document.getElementById('sortSelect');
+const locationSelect = document.getElementById('locationSelect');
 const savedFilterBtn = document.getElementById('savedFilterBtn');
+const filterBengaluruBtn = document.getElementById('filterBengaluruBtn');
 const filterUrgentBtn = document.getElementById('filterUrgentBtn');
 const filterHighPrizeBtn = document.getElementById('filterHighPrizeBtn');
 const viewListBtn = document.getElementById('viewListBtn');
@@ -68,6 +71,7 @@ const cancelModalBtn = document.getElementById('cancelModalBtn');
 const submitImportBtn = document.getElementById('submitImportBtn');
 const csvFileInput = document.getElementById('csvFileInput');
 const csvTextInput = document.getElementById('csvTextInput');
+const importAdminToken = document.getElementById('importAdminToken');
 
 // Shortcuts Elements
 const shortcutsPillBtn = document.getElementById('shortcutsPillBtn');
@@ -263,6 +267,28 @@ function setupEventListeners() {
     fetchOpportunities();
   });
 
+  // Location dropdown & Bengaluru quick-preset sync
+  if (locationSelect) {
+    locationSelect.value = state.location;
+    locationSelect.addEventListener('change', (e) => {
+      state.location = e.target.value;
+      if (filterBengaluruBtn) {
+        filterBengaluruBtn.classList.toggle('active', state.location === 'bengaluru');
+      }
+      fetchOpportunities();
+    });
+  }
+
+  if (filterBengaluruBtn) {
+    filterBengaluruBtn.classList.toggle('active', state.location === 'bengaluru');
+    filterBengaluruBtn.addEventListener('click', () => {
+      state.location = state.location === 'bengaluru' ? 'all' : 'bengaluru';
+      filterBengaluruBtn.classList.toggle('active', state.location === 'bengaluru');
+      if (locationSelect) locationSelect.value = state.location;
+      fetchOpportunities();
+    });
+  }
+
   // Source segmented tabs
   document.querySelectorAll('[data-source]').forEach(tab => {
     tab.addEventListener('click', () => {
@@ -371,12 +397,20 @@ function setupEventListeners() {
       submitImportBtn.disabled = true;
       submitImportBtn.textContent = 'Ingesting...';
       try {
+        const adminToken = importAdminToken ? importAdminToken.value.trim() : '';
         const res = await fetch('/api/import-csv', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ csv_text: text })
+          headers: {
+            'Content-Type': 'application/json',
+            ...(adminToken ? { 'X-Admin-Token': adminToken } : {})
+          },
+          body: JSON.stringify({ csv_text: text, admin_token: adminToken })
         });
         const data = await res.json();
+        if (!res.ok) {
+          showToast(data.error || 'Import rejected by server.');
+          return;
+        }
         showToast(`Ingested ${data.saved_count || 0} competitions!`);
         hideModal();
         csvTextInput.value = '';
@@ -495,6 +529,7 @@ async function fetchOpportunities() {
     category: state.category,
     query: state.query,
     sort: state.sort,
+    location: state.location,
     bookmarked: state.savedOnly,
     urgent: state.urgentOnly,
     high_prize: state.highPrizeOnly
@@ -1049,6 +1084,7 @@ function downloadExport(format) {
     source: state.source,
     category: state.category,
     query: state.query,
+    location: state.location,
     bookmarked: state.savedOnly,
     urgent: state.urgentOnly,
     high_prize: state.highPrizeOnly

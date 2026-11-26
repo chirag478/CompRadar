@@ -11,10 +11,12 @@ import mimetypes
 import threading
 import time
 import gzip
+import hmac
 import database
 from scrapers.aggregator import OpportunityAggregator
 
 PORT = int(os.environ.get("PORT", 5000))
+ADMIN_TOKEN = os.environ.get("COMPRADAR_ADMIN_TOKEN", "").strip()
 STATIC_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "static")
 aggregator = OpportunityAggregator()
 
@@ -113,6 +115,7 @@ class ScraperHandler(BaseHTTPRequestHandler):
             urgent_only = query_params.get("urgent", ["false"])[0].lower() == "true"
             high_prize_only = query_params.get("high_prize", ["false"])[0].lower() == "true"
             app_status = query_params.get("app_status", [None])[0]
+            location = query_params.get("location", [None])[0]
 
             results = database.get_opportunities(
                 source=source,
@@ -123,7 +126,8 @@ class ScraperHandler(BaseHTTPRequestHandler):
                 include_ended=include_ended,
                 urgent_only=urgent_only,
                 high_prize_only=high_prize_only,
-                app_status=app_status
+                app_status=app_status,
+                location=location
             )
             self._send_json({"count": len(results), "opportunities": results})
             return
@@ -140,13 +144,15 @@ class ScraperHandler(BaseHTTPRequestHandler):
             query = query_params.get("query", [None])[0]
             bookmarked = query_params.get("bookmarked", ["false"])[0].lower() == "true"
             include_ended = query_params.get("include_ended", ["false"])[0].lower() == "true"
+            location = query_params.get("location", [None])[0]
 
             items = database.get_opportunities(
                 source=source,
                 category=category,
                 query=query,
                 bookmarked_only=bookmarked,
-                include_ended=include_ended
+                include_ended=include_ended,
+                location=location
             )
 
             if fmt == "json":
@@ -228,6 +234,22 @@ class ScraperHandler(BaseHTTPRequestHandler):
             return
 
         elif path == "/api/import-csv":
+            if content_length > 262144:
+                self._send_json({"error": "CSV payload exceeds 256 KB limit."}, status=413)
+                return
+
+            client_ip = self.client_address[0] if self.client_address else ""
+            is_local = client_ip in ("127.0.0.1", "::1")
+            provided_token = (self.headers.get("X-Admin-Token") or payload.get("admin_token") or "").strip()
+
+            if ADMIN_TOKEN:
+                if not hmac.compare_digest(provided_token, ADMIN_TOKEN):
+                    self._send_json({"error": "Invalid or missing Admin Passkey."}, status=403)
+                    return
+            elif not is_local:
+                self._send_json({"error": "Admin Passkey not configured on server (COMPRADAR_ADMIN_TOKEN). Public imports are disabled."}, status=403)
+                return
+
             csv_text = payload.get("csv_text", "")
             if not csv_text:
                 csv_text = post_data

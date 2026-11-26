@@ -132,8 +132,11 @@ class CuratedFeedScraper:
         results = []
 
         for idx, row in enumerate(reader):
+            if idx >= 100:
+                break
+
             title = (row.get('Competition / event') or row.get('title') or '').strip()
-            if not title:
+            if not title or len(title) < 3 or len(title) > 180:
                 continue
 
             last_date = row.get('Last date to register ') or row.get('Last date to register') or row.get('deadline') or ''
@@ -144,6 +147,8 @@ class CuratedFeedScraper:
                 continue
 
             url = (row.get('Apply / official details') or row.get('url') or '').strip()
+            if not url.startswith(('http://', 'https://')):
+                continue
             notes = (row.get('Evidence / notes') or row.get('notes') or '').strip()
             format_rounds = (row.get('Format / rounds') or '').strip()
             eligibility = (row.get('First-year PG eligibility') or '').strip()

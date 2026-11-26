@@ -566,6 +566,38 @@ body {
 }
 .preset-dot.rose { background: var(--status-rose); }
 .preset-dot.amber { background: var(--status-amber); }
+.preset-dot.emerald { background: var(--status-emerald); }
+
+.admin-passkey-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin-bottom: 1rem;
+}
+.admin-passkey-label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+.admin-passkey-hint {
+  font-weight: 400;
+  color: var(--text-tertiary);
+  font-size: 0.72rem;
+}
+.admin-passkey-input {
+  width: 100%;
+  padding: 0.55rem 0.85rem;
+  background: var(--bg-app);
+  border: 1px solid var(--border-medium);
+  border-radius: var(--radius-xs);
+  color: var(--text-primary);
+  font-size: 0.82rem;
+  font-family: var(--font-mono);
+  outline: none;
+}
+.admin-passkey-input:focus {
+  border-color: var(--border-focus);
+}
 
 /* ==========================================================================
    Sync Banner
