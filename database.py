@@ -4,9 +4,17 @@ SQLite Database persistence for Scraped Opportunities & User Bookmarks
 import sqlite3
 import json
 import os
+import shutil
+import tempfile
 from datetime import datetime
 
-DB_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "opportunities.db")
+_REPO_DB_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "opportunities.db")
+if os.environ.get("VERCEL") or not os.access(os.path.dirname(_REPO_DB_FILE), os.W_OK):
+    DB_FILE = os.path.join(tempfile.gettempdir(), "opportunities.db")
+    if not os.path.exists(DB_FILE) and os.path.exists(_REPO_DB_FILE):
+        shutil.copy2(_REPO_DB_FILE, DB_FILE)
+else:
+    DB_FILE = _REPO_DB_FILE
 
 def get_connection():
     conn = sqlite3.connect(DB_FILE)

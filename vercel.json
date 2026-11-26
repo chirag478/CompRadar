@@ -1,0 +1,11 @@
+{
+  "version": 2,
+  "rewrites": [
+    { "source": "/api/(.*)", "destination": "/api/index.py" },
+    { "source": "/manifest.json", "destination": "/static/manifest.json" },
+    { "source": "/sw.js", "destination": "/static/sw.js" },
+    { "source": "/style.css", "destination": "/static/style.css" },
+    { "source": "/app.js", "destination": "/static/app.js" },
+    { "source": "/(.*)", "destination": "/static/index.html" }
+  ]
+}
