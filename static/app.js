@@ -102,6 +102,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // Pointer tracking for tactile card illumination
 document.addEventListener('pointermove', (e) => {
+  if (state.viewMode !== 'grid') return;
   const card = e.target.closest('.grid-card');
   if (card) {
     const rect = card.getBoundingClientRect();
@@ -111,6 +112,49 @@ document.addEventListener('pointermove', (e) => {
 }, { passive: true });
 
 function setupEventListeners() {
+  // Delegated click handler for opportunitiesContainer (avoids 300+ per-row closures)
+  opportunitiesContainer.addEventListener('click', (e) => {
+    const sortTh = e.target.closest('.th-sortable');
+    if (sortTh) {
+      const field = sortTh.dataset.sortField;
+      if (field === 'deadline') {
+        state.sort = state.sort === 'deadline' ? 'deadline_desc' : 'deadline';
+      } else if (field === 'prize') {
+        state.sort = state.sort === 'prize' ? 'deadline' : 'prize';
+      } else if (field === 'title') {
+        state.sort = state.sort === 'title' ? 'deadline' : 'title';
+      }
+      sortSelect.value = state.sort.startsWith('deadline') ? 'deadline' : state.sort;
+      fetchOpportunities();
+      return;
+    }
+
+    const rowOrCard = e.target.closest('.table-row, .grid-card');
+    if (!rowOrCard) return;
+    const index = parseInt(rowOrCard.dataset.index, 10);
+    const opp = state.items[index];
+    if (!opp) return;
+
+    if (e.target.closest('.bookmark-btn')) {
+      e.stopPropagation();
+      toggleBookmark(opp.id);
+      return;
+    }
+
+    if (e.target.closest('.share-wa-btn')) {
+      e.stopPropagation();
+      copyWhatsAppSummary(opp);
+      return;
+    }
+
+    if (e.target.closest('a[href]')) {
+      e.stopPropagation();
+      return;
+    }
+
+    setFocusRow(index);
+    openDrawer(opp);
+  });
   // Global Keyboard shortcuts
   document.addEventListener('keydown', (e) => {
     // If typing inside an input or textarea, only allow Escape
@@ -437,8 +481,13 @@ async function loadStats() {
   }
 }
 
-// Fetch opportunities
+// Fetch opportunities with AbortController to cancel stale requests
+let fetchAbortController = null;
 async function fetchOpportunities() {
+  if (fetchAbortController) {
+    fetchAbortController.abort();
+  }
+  fetchAbortController = new AbortController();
   opportunitiesContainer.style.opacity = '0.4';
 
   const params = new URLSearchParams({
@@ -452,16 +501,18 @@ async function fetchOpportunities() {
   });
 
   try {
-    const res = await fetch(`/api/opportunities?${params.toString()}`);
+    const res = await fetch(`/api/opportunities?${params.toString()}`, {
+      signal: fetchAbortController.signal
+    });
     const data = await res.json();
     state.items = data.opportunities || [];
     state.focusedIndex = -1;
     state.lastFetchTime = Date.now();
     renderOpportunities(state.items);
-    animateValue(resultsCount, state.items.length);
     resultsCount.textContent = `Showing ${state.items.length} opportunities`;
     updateLiveTickers();
   } catch (err) {
+    if (err.name === 'AbortError') return;
     console.error('Fetch error:', err);
     showToast('Failed to load competitions.');
   } finally {
@@ -469,10 +520,15 @@ async function fetchOpportunities() {
   }
 }
 
-// Live Real-Time Activity and Countdown Tickers
+// Live Real-Time Activity and Countdown Tickers (pauses when tab is hidden)
 function startLiveTickers() {
   updateLiveTickers();
-  setInterval(updateLiveTickers, 1000);
+  setInterval(() => {
+    if (!document.hidden) updateLiveTickers();
+  }, 1000);
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) updateLiveTickers();
+  });
 }
 
 function updateLiveTickers() {
@@ -528,8 +584,9 @@ function renderOpportunities(items) {
   }
 }
 
-// High-Density Data Table View with Clickable Sorting
+// High-Density Data Table View with DocumentFragment batching
 function renderListView(items) {
+  const fragment = document.createDocumentFragment();
   const header = document.createElement('div');
   header.className = 'list-table-header';
 
@@ -552,23 +609,7 @@ function renderListView(items) {
     <span style="text-align: right;">Action</span>
   `;
 
-  // Hook sorting click on headers
-  header.querySelectorAll('.th-sortable').forEach(th => {
-    th.addEventListener('click', () => {
-      const field = th.dataset.sortField;
-      if (field === 'deadline') {
-        state.sort = state.sort === 'deadline' ? 'deadline_desc' : 'deadline';
-      } else if (field === 'prize') {
-        state.sort = state.sort === 'prize' ? 'deadline' : 'prize';
-      } else if (field === 'title') {
-        state.sort = state.sort === 'title' ? 'deadline' : 'title';
-      }
-      sortSelect.value = state.sort.startsWith('deadline') ? 'deadline' : state.sort;
-      fetchOpportunities();
-    });
-  });
-
-  opportunitiesContainer.appendChild(header);
+  fragment.appendChild(header);
 
   items.forEach((opp, index) => {
     const row = document.createElement('div');
@@ -599,16 +640,16 @@ function renderListView(items) {
           </div>
         </div>
       </div>
-      <div>
+      <div class="col-meta-cell">
         ${trackBadgeHtml}
       </div>
-      <div>
+      <div class="col-meta-cell">
         ${sourceHtml}
       </div>
-      <div class="countdown-cell">
+      <div class="countdown-cell col-meta-cell">
         ${deadlineHtml}
       </div>
-      <div class="reward-cell">
+      <div class="reward-cell col-meta-cell">
         ${rewardHtml}
       </div>
       <div class="row-actions">
@@ -618,38 +659,22 @@ function renderListView(items) {
         <button class="btn-icon-subtle share-wa-btn" title="Copy for WhatsApp (Press w)">
           💬
         </button>
-        <a href="${opp.url}" target="_blank" rel="noopener noreferrer" class="btn-icon-subtle" title="Open Page ↗ (Press o)" onclick="event.stopPropagation();">
+        <a href="${opp.url}" target="_blank" rel="noopener noreferrer" class="btn-icon-subtle" title="Open Page ↗ (Press o)">
           ↗
         </a>
       </div>
     `;
 
-    // Row click opens inspection drawer
-    row.addEventListener('click', () => {
-      setFocusRow(index);
-      openDrawer(opp);
-    });
-
-    // Bookmark handler
-    const bBtn = row.querySelector('.bookmark-btn');
-    bBtn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      toggleBookmark(opp.id);
-    });
-
-    // WhatsApp quick share
-    const waBtn = row.querySelector('.share-wa-btn');
-    waBtn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      copyWhatsAppSummary(opp);
-    });
-
-    opportunitiesContainer.appendChild(row);
+    fragment.appendChild(row);
   });
+
+  opportunitiesContainer.appendChild(fragment);
 }
 
-// Precision Grid View
+// Precision Grid View with DocumentFragment batching
 function renderGridView(items) {
+  const fragment = document.createDocumentFragment();
+
   items.forEach((opp, index) => {
     const card = document.createElement('div');
     card.className = 'grid-card';
@@ -712,34 +737,19 @@ function renderGridView(items) {
       </div>
 
       <div class="card-footer-strip">
-        <button class="btn-icon-subtle share-wa-btn" title="Copy for WhatsApp" onclick="event.stopPropagation();">
+        <button class="btn-icon-subtle share-wa-btn" title="Copy for WhatsApp">
           💬
         </button>
-        <a href="${opp.url}" target="_blank" rel="noopener noreferrer" class="apply-button-direct" onclick="event.stopPropagation();">
+        <a href="${opp.url}" target="_blank" rel="noopener noreferrer" class="apply-button-direct">
           Open Official Portal ↗
         </a>
       </div>
     `;
 
-    card.addEventListener('click', () => {
-      setFocusRow(index);
-      openDrawer(opp);
-    });
-
-    const bBtn = card.querySelector('.bookmark-btn');
-    bBtn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      toggleBookmark(opp.id);
-    });
-
-    const waBtn = card.querySelector('.share-wa-btn');
-    waBtn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      copyWhatsAppSummary(opp);
-    });
-
-    opportunitiesContainer.appendChild(card);
+    fragment.appendChild(card);
   });
+
+  opportunitiesContainer.appendChild(fragment);
 }
 
 // Visual helpers for Ultra-Elevated Design

@@ -10,6 +10,7 @@ import os
 import mimetypes
 import threading
 import time
+import gzip
 import database
 from scrapers.aggregator import OpportunityAggregator
 
@@ -33,16 +34,28 @@ def _background_scraper_loop(interval_hours=6):
             print(f"[CompRadar AutoSync] Recurring background sync error: {ex}")
 
 class ScraperHandler(BaseHTTPRequestHandler):
-    def _send_json(self, data, status=200):
-        body = json.dumps(data).encode('utf-8')
+    def _accepts_gzip(self):
+        return "gzip" in self.headers.get("Accept-Encoding", "").lower()
+
+    def _send_compressed_or_raw(self, raw_bytes, content_type, status=200, cache_control="no-cache"):
+        use_gzip = len(raw_bytes) > 512 and self._accepts_gzip()
+        payload = gzip.compress(raw_bytes, compresslevel=6) if use_gzip else raw_bytes
         self.send_response(status)
-        self.send_header("Content-Type", "application/json; charset=utf-8")
-        self.send_header("Content-Length", str(len(body)))
+        self.send_header("Content-Type", content_type)
+        self.send_header("Content-Length", str(len(payload)))
+        self.send_header("Cache-Control", cache_control)
+        if use_gzip:
+            self.send_header("Content-Encoding", "gzip")
+            self.send_header("Vary", "Accept-Encoding")
         self.send_header("Access-Control-Allow-Origin", "*")
         self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
         self.send_header("Access-Control-Allow-Headers", "Content-Type")
         self.end_headers()
-        self.wfile.write(body)
+        self.wfile.write(payload)
+
+    def _send_json(self, data, status=200):
+        body = json.dumps(data, separators=(',', ':')).encode('utf-8')
+        self._send_compressed_or_raw(body, "application/json; charset=utf-8", status=status, cache_control="no-cache")
 
     def _send_file(self, filepath, content_type=None):
         if not os.path.exists(filepath):
@@ -62,12 +75,20 @@ class ScraperHandler(BaseHTTPRequestHandler):
         with open(filepath, "rb") as f:
             content = f.read()
 
-        self.send_response(200)
-        self.send_header("Content-Type", content_type)
-        self.send_header("Content-Length", str(len(content)))
-        self.send_header("Access-Control-Allow-Origin", "*")
-        self.end_headers()
-        self.wfile.write(content)
+        # Cache static assets (CSS/JS/manifest) briefly; keep HTML/SW fresh
+        is_immutable_asset = filepath.endswith((".css", ".js", ".png", ".svg", ".ico")) and not filepath.endswith("sw.js")
+        cache_header = "public, max-age=3600" if is_immutable_asset else "no-cache"
+
+        if content_type.startswith(("text/", "application/javascript", "application/json", "application/manifest+json", "image/svg+xml")):
+            self._send_compressed_or_raw(content, content_type, status=200, cache_control=cache_header)
+        else:
+            self.send_response(200)
+            self.send_header("Content-Type", content_type)
+            self.send_header("Content-Length", str(len(content)))
+            self.send_header("Cache-Control", cache_header)
+            self.send_header("Access-Control-Allow-Origin", "*")
+            self.end_headers()
+            self.wfile.write(content)
 
     def do_OPTIONS(self):
         self.send_response(200)
