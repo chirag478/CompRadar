@@ -1,12 +1,12 @@
 // CompRadar Service Worker
 // Enables offline shell caching & smooth mobile PWA experience
 
-const CACHE_NAME = 'compradar-v11';
+const CACHE_NAME = 'compradar-v12';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
-  '/style.css?v=11',
-  '/app.js?v=11',
+  '/style.css?v=12',
+  '/app.js?v=12',
   '/manifest.json',
   '/icon-192.png',
   '/icon-512.png'

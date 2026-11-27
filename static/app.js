@@ -1200,6 +1200,67 @@ function showToast(msg) {
 }
 
 // Register Service Worker for PWA Offline Support
+// Theme Management (System auto-detection + Manual Light/Dark override)
+const themeToggleBtn = document.getElementById('themeToggleBtn');
+const themeIconSvg = document.getElementById('themeIconSvg');
+const themeColorMeta = document.getElementById('themeColorMeta');
+const systemThemeMq = window.matchMedia ? window.matchMedia('(prefers-color-scheme: light)') : null;
+
+function getEffectiveTheme(pref) {
+  if (pref === 'light' || pref === 'dark') return pref;
+  return systemThemeMq && systemThemeMq.matches ? 'light' : 'dark';
+}
+
+function applyTheme(pref, announce = false) {
+  const validPref = ['system', 'light', 'dark'].includes(pref) ? pref : 'system';
+  localStorage.setItem('compradar_theme', validPref);
+  const effective = getEffectiveTheme(validPref);
+
+  document.documentElement.setAttribute('data-theme', effective);
+  document.body.classList.toggle('theme-light', effective === 'light');
+  document.body.classList.toggle('theme-dark', effective === 'dark');
+  if (themeColorMeta) {
+    themeColorMeta.setAttribute('content', effective === 'light' ? '#f7f7f8' : '#08080a');
+  }
+
+  if (themeIconSvg) {
+    if (validPref === 'light') {
+      themeIconSvg.innerHTML = '<circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>';
+    } else if (validPref === 'dark') {
+      themeIconSvg.innerHTML = '<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>';
+    } else {
+      themeIconSvg.innerHTML = '<rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line>';
+    }
+  }
+
+  if (themeToggleBtn) {
+    const label = validPref === 'system' ? `System (${effective})` : validPref.charAt(0).toUpperCase() + validPref.slice(1);
+    themeToggleBtn.title = `Theme: ${label} — Click to switch`;
+  }
+
+  if (announce) {
+    const msg = validPref === 'system' ? `Theme: System (${effective})` : `Theme: ${validPref.charAt(0).toUpperCase() + validPref.slice(1)}`;
+    showToast(msg);
+  }
+}
+
+if (themeToggleBtn) {
+  themeToggleBtn.addEventListener('click', () => {
+    const cur = localStorage.getItem('compradar_theme') || 'system';
+    const next = cur === 'system' ? 'light' : (cur === 'light' ? 'dark' : 'system');
+    applyTheme(next, true);
+  });
+}
+
+if (systemThemeMq) {
+  systemThemeMq.addEventListener('change', () => {
+    const cur = localStorage.getItem('compradar_theme') || 'system';
+    if (cur === 'system') applyTheme('system', false);
+  });
+}
+
+applyTheme(localStorage.getItem('compradar_theme') || 'system', false);
+
 // Register Service Worker & 1-Tap PWA Install Prompt
 let deferredInstallPrompt = null;
 const installAppBtn = document.getElementById('installAppBtn');

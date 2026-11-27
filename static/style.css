@@ -42,6 +42,35 @@
   --shadow-drawer: -12px 0 40px rgba(0, 0, 0, 0.95);
 }
 
+[data-theme="light"] {
+  --bg-app: #f7f7f8;
+  --bg-surface: #ffffff;
+  --bg-surface-raised: #f0f0f3;
+  --bg-surface-hover: #e6e6eb;
+  --bg-surface-glass: rgba(255, 255, 255, 0.88);
+  --bg-subtle: rgba(0, 0, 0, 0.03);
+
+  --border-subtle: rgba(0, 0, 0, 0.08);
+  --border-medium: rgba(0, 0, 0, 0.14);
+  --border-active: rgba(0, 0, 0, 0.3);
+  --border-focus: rgba(0, 0, 0, 0.5);
+
+  --text-primary: #111115;
+  --text-secondary: #52525b;
+  --text-tertiary: #71717a;
+  --text-inverse: #ffffff;
+
+  --accent-white: #111115;
+  --accent-muted: #3f3f46;
+  --status-emerald: #059669;
+  --status-rose: #e11d48;
+  --status-amber: #d97706;
+
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.06);
+  --shadow-md: 0 8px 28px rgba(0, 0, 0, 0.12);
+  --shadow-drawer: -12px 0 40px rgba(0, 0, 0, 0.14);
+}
+
 * {
   margin: 0;
   padding: 0;
@@ -222,15 +251,14 @@ body {
 }
 
 .btn-accent {
-  background: #ffffff;
-  color: #000000;
+  background: var(--text-primary);
+  color: var(--text-inverse);
   font-weight: 600;
-  border-color: #ffffff;
+  border-color: var(--text-primary);
 }
 
 .btn-accent:hover {
-  background: #e4e4e7;
-  border-color: #e4e4e7;
+  opacity: 0.88;
 }
 
 .btn-outline {
@@ -917,13 +945,13 @@ body {
 
 .table-row:hover {
   background: var(--bg-surface-raised);
-  border-left-color: #ffffff;
+  border-left-color: var(--text-primary);
 }
 
 .table-row.kb-focused {
   background: var(--bg-surface-hover);
   outline: 1px solid var(--border-active);
-  border-left-color: #ffffff;
+  border-left-color: var(--text-primary);
 }
 
 .col-primary {
@@ -1062,10 +1090,10 @@ body {
 }
 
 .grid-card:hover {
-  border-color: rgba(255, 255, 255, 0.22);
+  border-color: var(--border-active);
   background: var(--bg-surface-raised);
   transform: translateY(-2px);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.65);
+  box-shadow: var(--shadow-md);
 }
 
 .grid-card:active {
@@ -1191,9 +1219,9 @@ body {
 }
 
 .apply-button-direct:hover {
-  background: #ffffff;
-  color: #000000;
-  border-color: #ffffff;
+  background: var(--text-primary);
+  color: var(--text-inverse);
+  border-color: var(--text-primary);
 }
 
 /* ==========================================================================
@@ -1779,6 +1807,7 @@ body {
     display: none;
   }
 
+  #themeToggleBtn,
   #installAppBtn,
   #importModalBtn,
   #exportBtn {
