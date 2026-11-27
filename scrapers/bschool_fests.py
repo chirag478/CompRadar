@@ -137,7 +137,59 @@ class BSchoolFestScraper:
                 "deadline": "December 2026",
                 "days_left": "220 days left",
                 "days_left_num": 220,
-                "tags": ["ISB", "Advaita", "Executive Case", "Global Leadership"]
+                "tags": ["ISB", "Advaita", "MBA / PG", "Executive Case", "Global Leadership"]
+            },
+            {
+                "id": "fest-iimb-eximius-bzzwings",
+                "title": "Eximius Bzzwings: National Startup & Strategy Pitch 2026",
+                "organizer": "IIM Bangalore (Eximius)",
+                "category": "Strategy & Consulting",
+                "prize": "₹3,00,000",
+                "url": "https://unstop.com/o/eximius-iim-bangalore",
+                "location": "Bengaluru, Karnataka / Hybrid",
+                "deadline": "August 2026",
+                "days_left": "95 days left",
+                "days_left_num": 95,
+                "tags": ["IIMB Eximius", "Bengaluru", "MBA / PG", "PPO / PPI", "Startup Pitch"]
+            },
+            {
+                "id": "fest-sibm-blr-revelation",
+                "title": "Revelation 2026: National Strategy & Finance Case",
+                "organizer": "SIBM Bengaluru",
+                "category": "Case Studies",
+                "prize": "₹1,50,000",
+                "url": "https://unstop.com/o/revelation-sibm-bengaluru",
+                "location": "Bengaluru, Karnataka / Hybrid",
+                "deadline": "November 2026",
+                "days_left": "165 days left",
+                "days_left_num": 165,
+                "tags": ["SIBM Bengaluru", "Bengaluru", "MBA / PG", "Case Study"]
+            },
+            {
+                "id": "fest-blr-tech-summit-ai",
+                "title": "Bengaluru GenAI & DeepTech Buildathon 2026",
+                "organizer": "Bengaluru Tech & AI Collective",
+                "category": "Tech Hackathons",
+                "prize": "₹10,00,000",
+                "url": "https://devpost.com/hackathons?search=bengaluru",
+                "location": "Bengaluru, Karnataka / Hybrid",
+                "deadline": "November 2026",
+                "days_left": "140 days left",
+                "days_left_num": 140,
+                "tags": ["Bengaluru", "AI / ML", "PPO / PPI", "Open to All"]
+            },
+            {
+                "id": "fest-iisc-blr-product",
+                "title": "IISc Pravega: Bengaluru Product & Innovation Challenge",
+                "organizer": "IISc Bangalore",
+                "category": "Product Management",
+                "prize": "₹2,00,000",
+                "url": "https://unstop.com/o/pravega-iisc-bangalore",
+                "location": "Bengaluru, Karnataka / Hybrid",
+                "deadline": "December 2026",
+                "days_left": "185 days left",
+                "days_left_num": 185,
+                "tags": ["IISc Bengaluru", "Bengaluru", "Product Mgmt", "Open to All"]
             }
         ]
 

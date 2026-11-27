@@ -129,6 +129,8 @@ class ScraperHandler(BaseHTTPRequestHandler):
             high_prize_only = query_params.get("high_prize", ["false"])[0].lower() == "true"
             app_status = query_params.get("app_status", [None])[0]
             location = query_params.get("location", [None])[0]
+            ppo_only = query_params.get("ppo", ["false"])[0].lower() == "true"
+            mba_1st_only = query_params.get("mba_1st", ["false"])[0].lower() == "true"
 
             results = database.get_opportunities(
                 source=source,
@@ -140,7 +142,9 @@ class ScraperHandler(BaseHTTPRequestHandler):
                 urgent_only=urgent_only,
                 high_prize_only=high_prize_only,
                 app_status=app_status,
-                location=location
+                location=location,
+                ppo_only=ppo_only,
+                mba_1st_only=mba_1st_only
             )
             self._send_json({"count": len(results), "opportunities": results})
             return
@@ -158,6 +162,8 @@ class ScraperHandler(BaseHTTPRequestHandler):
             bookmarked = query_params.get("bookmarked", ["false"])[0].lower() == "true"
             include_ended = query_params.get("include_ended", ["false"])[0].lower() == "true"
             location = query_params.get("location", [None])[0]
+            ppo_only = query_params.get("ppo", ["false"])[0].lower() == "true"
+            mba_1st_only = query_params.get("mba_1st", ["false"])[0].lower() == "true"
 
             items = database.get_opportunities(
                 source=source,
@@ -165,7 +171,9 @@ class ScraperHandler(BaseHTTPRequestHandler):
                 query=query,
                 bookmarked_only=bookmarked,
                 include_ended=include_ended,
-                location=location
+                location=location,
+                ppo_only=ppo_only,
+                mba_1st_only=mba_1st_only
             )
 
             if fmt == "json":

@@ -31,22 +31,45 @@ function saveLocalStages(stagesObj) {
   localStorage.setItem('compradar_stages', JSON.stringify(stagesObj));
 }
 
-// State
+// State (hydrated from URLSearchParams for shareable filter links)
 const state = {
   source: urlParams.get('source') || 'all',
   category: urlParams.get('category') || 'all',
   query: urlParams.get('q') || '',
-  sort: 'deadline',
+  sort: urlParams.get('sort') || 'deadline',
   location: urlParams.get('location') || 'all',
-  savedOnly: false,
-  urgentOnly: false,
-  highPrizeOnly: false,
+  savedOnly: urlParams.get('saved') === 'true',
+  urgentOnly: urlParams.get('urgent') === 'true',
+  highPrizeOnly: urlParams.get('high_prize') === 'true',
+  ppoOnly: urlParams.get('ppo') === 'true',
+  mba1stOnly: urlParams.get('mba_1st') === 'true',
   viewMode: urlParams.get('view') || localStorage.getItem('compradar_view') || localStorage.getItem('oppscout_view') || 'list', // 'list' | 'grid'
   items: [],
   selectedItem: null,
   focusedIndex: -1,
   isScraping: false
 };
+
+function syncUrlFromState() {
+  const params = new URLSearchParams();
+  if (state.source !== 'all') params.set('source', state.source);
+  if (state.category !== 'all') params.set('category', state.category);
+  if (state.query) params.set('q', state.query);
+  if (state.location !== 'all') params.set('location', state.location);
+  if (state.sort !== 'deadline') params.set('sort', state.sort);
+  if (state.viewMode !== 'list') params.set('view', state.viewMode);
+  if (state.savedOnly) params.set('saved', 'true');
+  if (state.urgentOnly) params.set('urgent', 'true');
+  if (state.highPrizeOnly) params.set('high_prize', 'true');
+  if (state.ppoOnly) params.set('ppo', 'true');
+  if (state.mba1stOnly) params.set('mba_1st', 'true');
+
+  const qs = params.toString();
+  const nextUrl = qs ? `${window.location.pathname}?${qs}` : window.location.pathname;
+  if (window.location.pathname + window.location.search !== nextUrl) {
+    history.replaceState(null, '', nextUrl);
+  }
+}
 
 // DOM References
 const searchInput = document.getElementById('searchInput');
@@ -57,6 +80,8 @@ const savedFilterBtn = document.getElementById('savedFilterBtn');
 const filterBengaluruBtn = document.getElementById('filterBengaluruBtn');
 const filterUrgentBtn = document.getElementById('filterUrgentBtn');
 const filterHighPrizeBtn = document.getElementById('filterHighPrizeBtn');
+const filterPpoBtn = document.getElementById('filterPpoBtn');
+const filterMbaBtn = document.getElementById('filterMbaBtn');
 const viewListBtn = document.getElementById('viewListBtn');
 const viewGridBtn = document.getElementById('viewGridBtn');
 const scrapeBtn = document.getElementById('scrapeBtn');
@@ -314,6 +339,24 @@ function setupEventListeners() {
     });
   }
 
+  // Hydrate initial UI controls from URL state
+  if (state.query && searchInput) {
+    searchInput.value = state.query;
+    if (clearSearch) clearSearch.classList.remove('hidden');
+  }
+  if (sortSelect) sortSelect.value = state.sort.startsWith('deadline') ? 'deadline' : state.sort;
+  document.querySelectorAll('[data-source]').forEach(t => {
+    t.classList.toggle('active', t.dataset.source === state.source);
+  });
+  document.querySelectorAll('[data-category]').forEach(c => {
+    c.classList.toggle('active', c.dataset.category === state.category);
+  });
+  if (savedFilterBtn) savedFilterBtn.classList.toggle('active', state.savedOnly);
+  if (filterUrgentBtn) filterUrgentBtn.classList.toggle('active', state.urgentOnly);
+  if (filterHighPrizeBtn) filterHighPrizeBtn.classList.toggle('active', state.highPrizeOnly);
+  if (filterPpoBtn) filterPpoBtn.classList.toggle('active', state.ppoOnly);
+  if (filterMbaBtn) filterMbaBtn.classList.toggle('active', state.mba1stOnly);
+
   // Source segmented tabs
   document.querySelectorAll('[data-source]').forEach(tab => {
     tab.addEventListener('click', () => {
@@ -354,6 +397,22 @@ function setupEventListeners() {
     filterHighPrizeBtn.addEventListener('click', () => {
       state.highPrizeOnly = !state.highPrizeOnly;
       filterHighPrizeBtn.classList.toggle('active', state.highPrizeOnly);
+      fetchOpportunities();
+    });
+  }
+
+  if (filterPpoBtn) {
+    filterPpoBtn.addEventListener('click', () => {
+      state.ppoOnly = !state.ppoOnly;
+      filterPpoBtn.classList.toggle('active', state.ppoOnly);
+      fetchOpportunities();
+    });
+  }
+
+  if (filterMbaBtn) {
+    filterMbaBtn.addEventListener('click', () => {
+      state.mba1stOnly = !state.mba1stOnly;
+      filterMbaBtn.classList.toggle('active', state.mba1stOnly);
       fetchOpportunities();
     });
   }
@@ -482,6 +541,7 @@ function setupEventListeners() {
 function applyViewMode(mode) {
   state.viewMode = mode;
   localStorage.setItem('compradar_view', mode);
+  syncUrlFromState();
 
   viewListBtn.classList.toggle('active', mode === 'list');
   viewGridBtn.classList.toggle('active', mode === 'grid');
@@ -543,6 +603,7 @@ async function loadStats() {
 // Fetch opportunities with AbortController to cancel stale requests
 let fetchAbortController = null;
 async function fetchOpportunities() {
+  syncUrlFromState();
   if (fetchAbortController) {
     fetchAbortController.abort();
   }
@@ -556,7 +617,9 @@ async function fetchOpportunities() {
     sort: state.sort,
     location: state.location,
     urgent: state.urgentOnly,
-    high_prize: state.highPrizeOnly
+    high_prize: state.highPrizeOnly,
+    ppo: state.ppoOnly,
+    mba_1st: state.mba1stOnly
   });
 
   try {
@@ -1117,7 +1180,9 @@ function downloadExport(format) {
     location: state.location,
     bookmarked: state.savedOnly,
     urgent: state.urgentOnly,
-    high_prize: state.highPrizeOnly
+    high_prize: state.highPrizeOnly,
+    ppo: state.ppoOnly,
+    mba_1st: state.mba1stOnly
   });
   window.location.href = `/api/export?${params.toString()}`;
   showToast(`Exporting data as ${format.toUpperCase()}...`);

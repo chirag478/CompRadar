@@ -106,7 +106,7 @@ def save_opportunities(opportunities):
     conn.close()
     return saved_count
 
-def get_opportunities(source=None, category=None, query=None, bookmarked_only=False, sort_by="deadline", include_ended=False, app_status=None, urgent_only=False, high_prize_only=False, location=None):
+def get_opportunities(source=None, category=None, query=None, bookmarked_only=False, sort_by="deadline", include_ended=False, app_status=None, urgent_only=False, high_prize_only=False, location=None, ppo_only=False, mba_1st_only=False):
     conn = get_connection()
     cursor = conn.cursor()
 
@@ -121,7 +121,13 @@ def get_opportunities(source=None, category=None, query=None, bookmarked_only=Fa
         conditions.append("days_left_num >= 0 AND days_left_num <= 3")
 
     if high_prize_only:
-        conditions.append("(prize LIKE '%lakh%' OR prize LIKE '%$%' OR prize LIKE '%50,000%' OR prize LIKE '%1,00,000%' OR prize LIKE '%25,000%')")
+        conditions.append("(prize LIKE '%lakh%' OR prize LIKE '%$%' OR prize LIKE '%50,000%' OR prize LIKE '%1,00,000%' OR prize LIKE '%25,000%' OR prize LIKE '%Cr%')")
+
+    if ppo_only:
+        conditions.append("(LOWER(prize) LIKE '%ppo%' OR LOWER(prize) LIKE '%ppi%' OR LOWER(prize) LIKE '%placement%' OR LOWER(prize) LIKE '%internship%' OR LOWER(tags) LIKE '%ppo%' OR LOWER(tags) LIKE '%ppi%' OR LOWER(category) LIKE '%hiring%')")
+
+    if mba_1st_only:
+        conditions.append("(LOWER(tags) LIKE '%mba%' OR LOWER(tags) LIKE '%pg%' OR LOWER(tags) LIKE '%open to all%' OR LOWER(category) LIKE '%case%' OR LOWER(category) LIKE '%strategy%' OR LOWER(category) LIKE '%marketing%')")
 
     if app_status and app_status.lower() != "all":
         conditions.append("LOWER(application_status) = LOWER(?)")

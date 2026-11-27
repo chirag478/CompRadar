@@ -90,15 +90,22 @@ class UnstopScraper:
         elif isinstance(org_data, str) and org_data.strip():
             organizer = org_data.strip()
 
-        # Location
+        # Location (check locations array, city, and organizer institute hints)
         location = "Online"
         locations = raw.get('locations')
         if locations and isinstance(locations, list) and len(locations) > 0:
             first_loc = locations[0]
             if isinstance(first_loc, dict):
-                location = first_loc.get('city') or first_loc.get('country') or "Online"
-            elif isinstance(first_loc, str):
-                location = first_loc
+                city = first_loc.get('city') or ""
+                state = first_loc.get('state') or ""
+                country = first_loc.get('country') or ""
+                location = ", ".join([x for x in (city, state) if x]) or country or "Online"
+            elif isinstance(first_loc, str) and first_loc.strip():
+                location = first_loc.strip()
+        if location == "Online":
+            org_low = organizer.lower()
+            if any(k in org_low for k in ("bangalore", "bengaluru", "iimb", "iisc", "sibm bengaluru")):
+                location = "Bengaluru / Online"
 
         # Dates & Deadline
         reg_req = raw.get('regnRequirements') or {}
@@ -167,8 +174,17 @@ class UnstopScraper:
             if kw.lower() in title_lower and kw not in tags:
                 tags.append(kw)
 
-        # Prize
-        prize_summary = UnstopScraper._format_prize(raw.get('prizes'))
+        # Prize & PPO/PPI detection
+        prizes_raw = raw.get('prizes')
+        prize_summary = UnstopScraper._format_prize(prizes_raw)
+        prizes_blob = json.dumps(prizes_raw or "").lower()
+        if any(k in prizes_blob or k in title_lower for k in ("ppo", "ppi", "pre-placement", "internship")):
+            if "PPO / PPI" not in tags:
+                tags.append("PPO / PPI")
+        filters_blob = json.dumps(filters or "").lower()
+        if any(k in filters_blob for k in ("mba", "postgraduate", "pg", "management")):
+            if "MBA / PG" not in tags:
+                tags.append("MBA / PG")
 
         # Banner/thumbnail
         banner = None
