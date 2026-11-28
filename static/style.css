@@ -516,6 +516,13 @@ body {
   display: none;
 }
 
+.filters-dropdowns-row {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  flex-shrink: 0;
+}
+
 /* Custom Animated Source Dropdown */
 .custom-dropdown {
   position: relative;
@@ -1897,6 +1904,29 @@ body {
 
   .filters-dock .filter-separator {
     display: none;
+  }
+
+  .filters-dropdowns-row {
+    width: 100%;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 0.55rem;
+  }
+
+  .filters-dropdowns-row .custom-dropdown {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .filters-dropdowns-row .custom-dropdown-trigger {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .filters-dropdowns-row .custom-dropdown-trigger span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .source-segmented-tabs,

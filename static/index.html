@@ -22,7 +22,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=16">
+  <link rel="stylesheet" href="style.css?v=17">
 </head>
 <body class="theme-dark">
   <!-- Top App Navigation -->
@@ -197,7 +197,8 @@
 
     <!-- Source and Category Filter Bar -->
     <section class="filters-dock">
-      <!-- Custom Animated Source Dropdown -->
+      <div class="filters-dropdowns-row">
+        <!-- Custom Animated Source Dropdown -->
       <div class="custom-dropdown" id="sourceDropdown">
         <button type="button" class="custom-dropdown-trigger" id="sourceDropdownBtn" aria-haspopup="listbox" aria-expanded="false">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="icon-xs">
@@ -299,6 +300,7 @@
           </button>
         </div>
       </div>
+      </div>
 
       <div class="filter-separator"></div>
 
@@ -314,7 +316,7 @@
         <!-- Quick UX Presets -->
         <button id="filterBengaluruBtn" class="chip chip-preset" data-active="false" title="Filter competitions hosted in or targeting Bengaluru (SSB)">
           <span class="preset-dot emerald"></span>
-          <span>📍 Bengaluru</span>
+          <span>Bengaluru</span>
         </button>
         <button id="filterUrgentBtn" class="chip chip-preset" data-active="false" title="Filter competitions closing in 3 days or less">
           <span class="preset-dot rose"></span>
@@ -559,6 +561,6 @@
   <div id="toast" class="toast hidden"></div>
 
   <!-- App Script -->
-  <script src="app.js?v=16"></script>
+  <script src="app.js?v=17"></script>
 </body>
 </html>
