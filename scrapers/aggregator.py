@@ -6,6 +6,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 import csv
 import io
 import json
+import re
 from scrapers.unstop import UnstopScraper
 from scrapers.devpost import DevpostScraper
 from scrapers.devfolio import DevfolioScraper
@@ -78,13 +79,35 @@ class OpportunityAggregator:
                 except Exception as e:
                     print(f"[Aggregator] Scraper execution error: {e}")
 
-        # Save to database (deduplicates automatically)
-        saved_count = database.save_opportunities(results)
+        # Deduplicate across all sources (preferring live APIs over Curated Feed)
+        deduped = self._deduplicate(results)
+
+        # Save to database (also checks existing DB rows by canonical URL/title)
+        saved_count = database.save_opportunities(deduped)
         return {
-            "scraped_count": len(results),
+            "scraped_count": len(deduped),
             "saved_count": saved_count,
-            "opportunities": results
+            "opportunities": deduped
         }
+
+    @staticmethod
+    def _deduplicate(items):
+        # Put live API sources before Curated Feed so live metadata wins
+        ordered = sorted(items, key=lambda x: 1 if (x.get("source") or "").lower().startswith("curated") else 0)
+        seen_urls = set()
+        seen_titles = set()
+        unique = []
+        for item in ordered:
+            u = (item.get("url") or "").split("?")[0].rstrip("/").lower().strip()
+            t = re.sub(r"[^a-z0-9]+", " ", (item.get("title") or "").lower()).strip()
+            if (u and u in seen_urls) or (t and t in seen_titles):
+                continue
+            if u:
+                seen_urls.add(u)
+            if t:
+                seen_titles.add(t)
+            unique.append(item)
+        return unique
 
     def import_custom_csv(self, csv_text):
         """

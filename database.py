@@ -4,6 +4,7 @@ SQLite Database persistence for Scraped Opportunities & User Bookmarks
 import sqlite3
 import json
 import os
+import re
 import shutil
 import tempfile
 from datetime import datetime
@@ -49,18 +50,73 @@ def init_db():
     conn.commit()
     conn.close()
 
+def _norm_url(url):
+    return (url or "").split("?")[0].rstrip("/").lower().strip()
+
+def _norm_title(title):
+    return re.sub(r"[^a-z0-9]+", " ", (title or "").lower()).strip()
+
+def deduplicate_db():
+    """Removes cross-source duplicates sharing the same canonical URL or title."""
+    conn = get_connection()
+    cursor = conn.cursor()
+    rows = cursor.execute("SELECT id, source, title, url FROM opportunities ORDER BY scraped_at DESC").fetchall()
+
+    # Prefer live API sources over Curated Feed
+    rows_sorted = sorted(rows, key=lambda r: 1 if (r["source"] or "").lower().startswith("curated") else 0)
+    seen_urls = set()
+    seen_titles = set()
+    to_delete = []
+
+    for r in rows_sorted:
+        u = _norm_url(r["url"])
+        t = _norm_title(r["title"])
+        if (u and u in seen_urls) or (t and t in seen_titles):
+            to_delete.append((r["id"],))
+        else:
+            if u:
+                seen_urls.add(u)
+            if t:
+                seen_titles.add(t)
+
+    if to_delete:
+        cursor.executemany("DELETE FROM opportunities WHERE id = ?", to_delete)
+        conn.commit()
+    conn.close()
+    return len(to_delete)
+
 def save_opportunities(opportunities):
     """
-    Inserts or updates opportunities while preserving user bookmarks and application status.
+    Inserts or updates opportunities while preserving user bookmarks, application status,
+    and preventing cross-source duplicates by canonical URL or normalized title.
     """
     if not opportunities:
         return 0
 
     conn = get_connection()
     cursor = conn.cursor()
+    existing_rows = cursor.execute("SELECT id, title, url FROM opportunities").fetchall()
+    url_to_id = {}
+    title_to_id = {}
+    for row in existing_rows:
+        u = _norm_url(row["url"])
+        t = _norm_title(row["title"])
+        if u:
+            url_to_id[u] = row["id"]
+        if t:
+            title_to_id[t] = row["id"]
+
     saved_count = 0
 
     for opp in opportunities:
+        u = _norm_url(opp.get("url"))
+        t = _norm_title(opp.get("title"))
+        canonical_id = url_to_id.get(u) or title_to_id.get(t) or opp["id"]
+        if u:
+            url_to_id[u] = canonical_id
+        if t:
+            title_to_id[t] = canonical_id
+
         tags_json = json.dumps(opp.get('tags', []))
         # Keep existing bookmark and application status if already present
         cursor.execute("""
@@ -84,7 +140,7 @@ def save_opportunities(opportunities):
             status=excluded.status,
             scraped_at=CURRENT_TIMESTAMP
         """, (
-            opp['id'],
+            canonical_id,
             opp['source'],
             opp['title'],
             opp['category'],
