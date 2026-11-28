@@ -75,6 +75,7 @@ function syncUrlFromState() {
 const searchInput = document.getElementById('searchInput');
 const clearSearch = document.getElementById('clearSearch');
 const sortSelect = document.getElementById('sortSelect');
+const sourceSelect = document.getElementById('sourceSelect');
 const locationSelect = document.getElementById('locationSelect');
 const savedFilterBtn = document.getElementById('savedFilterBtn');
 const filterBengaluruBtn = document.getElementById('filterBengaluruBtn');
@@ -345,9 +346,7 @@ function setupEventListeners() {
     if (clearSearch) clearSearch.classList.remove('hidden');
   }
   if (sortSelect) sortSelect.value = state.sort.startsWith('deadline') ? 'deadline' : state.sort;
-  document.querySelectorAll('[data-source]').forEach(t => {
-    t.classList.toggle('active', t.dataset.source === state.source);
-  });
+  if (sourceSelect) sourceSelect.value = state.source;
   document.querySelectorAll('[data-category]').forEach(c => {
     c.classList.toggle('active', c.dataset.category === state.category);
   });
@@ -357,15 +356,13 @@ function setupEventListeners() {
   if (filterPpoBtn) filterPpoBtn.classList.toggle('active', state.ppoOnly);
   if (filterMbaBtn) filterMbaBtn.classList.toggle('active', state.mba1stOnly);
 
-  // Source segmented tabs
-  document.querySelectorAll('[data-source]').forEach(tab => {
-    tab.addEventListener('click', () => {
-      document.querySelectorAll('[data-source]').forEach(t => t.classList.remove('active'));
-      tab.classList.add('active');
-      state.source = tab.dataset.source;
+  // Source dropdown
+  if (sourceSelect) {
+    sourceSelect.addEventListener('change', (e) => {
+      state.source = e.target.value;
       fetchOpportunities();
     });
-  });
+  }
 
   // Category filter chips
   document.querySelectorAll('[data-category]').forEach(chip => {

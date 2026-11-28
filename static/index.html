@@ -22,7 +22,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=13">
+  <link rel="stylesheet" href="style.css?v=14">
 </head>
 <body class="theme-dark">
   <!-- Top App Navigation -->
@@ -197,18 +197,20 @@
 
     <!-- Source and Category Filter Bar -->
     <section class="filters-dock">
-      <!-- Source tabs -->
-      <div class="source-segmented-tabs">
-        <button class="source-tab active" data-source="all">All Sources</button>
-        <button class="source-tab" data-source="unstop">Unstop</button>
-        <button class="source-tab" data-source="devfolio">Devfolio</button>
-        <button class="source-tab" data-source="devpost">Devpost</button>
-        <button class="source-tab" data-source="hackerearth">HackerEarth</button>
-        <button class="source-tab" data-source="superteam">Superteam Earn</button>
-        <button class="source-tab" data-source="kaggle">Kaggle & ML</button>
-        <button class="source-tab" data-source="bschool">B-School Fests</button>
-        <button class="source-tab" data-source="corporate">Corporate</button>
-        <button class="source-tab" data-source="curated">Curated</button>
+      <!-- Source dropdown -->
+      <div class="source-dropdown-wrap" style="flex-shrink: 0;">
+        <select id="sourceSelect" class="clean-select" title="Filter by Source Platform">
+          <option value="all">Source: All Platforms (9)</option>
+          <option value="unstop">Unstop</option>
+          <option value="devfolio">Devfolio</option>
+          <option value="devpost">Devpost</option>
+          <option value="hackerearth">HackerEarth</option>
+          <option value="superteam">Superteam Earn</option>
+          <option value="kaggle">Kaggle & ML</option>
+          <option value="bschool">B-School Fests</option>
+          <option value="corporate">Corporate Flagships</option>
+          <option value="curated">Curated Feed</option>
+        </select>
       </div>
 
       <div class="filter-separator"></div>
@@ -516,6 +518,6 @@
   <div id="toast" class="toast hidden"></div>
 
   <!-- App Script -->
-  <script src="app.js?v=13"></script>
+  <script src="app.js?v=14"></script>
 </body>
 </html>
