@@ -22,7 +22,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=15">
+  <link rel="stylesheet" href="style.css?v=16">
 </head>
 <body class="theme-dark">
   <!-- Top App Navigation -->
@@ -254,62 +254,62 @@
         </div>
       </div>
 
+      <!-- Custom Animated Track / Category Dropdown -->
+      <div class="custom-dropdown" id="trackDropdown">
+        <button type="button" class="custom-dropdown-trigger" id="trackDropdownBtn" aria-haspopup="listbox" aria-expanded="false">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="icon-xs">
+            <rect x="3" y="3" width="7" height="7"></rect>
+            <rect x="14" y="3" width="7" height="7"></rect>
+            <rect x="14" y="14" width="7" height="7"></rect>
+            <rect x="3" y="14" width="7" height="7"></rect>
+          </svg>
+          <span id="trackDropdownLabel">All Tracks</span>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="dropdown-chevron icon-xs">
+            <polyline points="6 9 12 15 18 9"></polyline>
+          </svg>
+        </button>
+        <div class="custom-dropdown-menu" id="trackDropdownMenu" role="listbox">
+          <button type="button" class="custom-dropdown-item active" data-value="all">
+            <span class="src-option-left"><span class="src-dot-live"></span>All Tracks</span>
+            <span class="src-option-check">✓</span>
+          </button>
+          <button type="button" class="custom-dropdown-item" data-value="hackathons">
+            <span class="src-option-left"><span class="src-dot-muted"></span>Tech Hackathons</span>
+            <span class="src-option-check">✓</span>
+          </button>
+          <button type="button" class="custom-dropdown-item" data-value="case_study">
+            <span class="src-option-left"><span class="src-dot-muted"></span>Product Cases</span>
+            <span class="src-option-check">✓</span>
+          </button>
+          <button type="button" class="custom-dropdown-item" data-value="strategy">
+            <span class="src-option-left"><span class="src-dot-muted"></span>Strategy & Consulting</span>
+            <span class="src-option-check">✓</span>
+          </button>
+          <button type="button" class="custom-dropdown-item" data-value="marketing">
+            <span class="src-option-left"><span class="src-dot-muted"></span>Marketing & Brand</span>
+            <span class="src-option-check">✓</span>
+          </button>
+          <button type="button" class="custom-dropdown-item" data-value="product">
+            <span class="src-option-left"><span class="src-dot-muted"></span>Product Mgmt</span>
+            <span class="src-option-check">✓</span>
+          </button>
+          <button type="button" class="custom-dropdown-item" data-value="hiring">
+            <span class="src-option-left"><span class="src-dot-muted"></span>Hiring Challenges</span>
+            <span class="src-option-check">✓</span>
+          </button>
+        </div>
+      </div>
+
       <div class="filter-separator"></div>
 
-      <!-- Category Filter Chips with Icons -->
+      <!-- Quick Filter Chips -->
       <div class="category-chips-scroll">
-        <button class="chip active" data-category="all">All Tracks</button>
-        <button class="chip" data-category="hackathons">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-xs">
-            <polyline points="16 18 22 12 16 6"></polyline>
-            <polyline points="8 6 2 12 8 18"></polyline>
-          </svg>
-          <span>Tech Hackathons</span>
-        </button>
-        <button class="chip" data-category="case_study">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-xs">
-            <rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect>
-            <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path>
-          </svg>
-          <span>Product Cases</span>
-        </button>
-        <button class="chip" data-category="strategy">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-xs">
-            <circle cx="12" cy="12" r="10"></circle>
-            <circle cx="12" cy="12" r="6"></circle>
-            <circle cx="12" cy="12" r="2"></circle>
-          </svg>
-          <span>Strategy</span>
-        </button>
-        <button class="chip" data-category="marketing">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-xs">
-            <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
-          </svg>
-          <span>Marketing</span>
-        </button>
-        <button class="chip" data-category="product">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-xs">
-            <polygon points="12 2 2 7 12 12 22 7 12 2"></polygon>
-            <polyline points="2 17 12 22 22 17"></polyline>
-            <polyline points="2 12 12 17 22 12"></polyline>
-          </svg>
-          <span>Product Mgmt</span>
-        </button>
-        <button class="chip" data-category="hiring">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-xs">
-            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-            <circle cx="12" cy="7" r="4"></circle>
-          </svg>
-          <span>Hiring Challenges</span>
-        </button>
         <button id="savedFilterBtn" class="chip chip-saved" data-active="false">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-xs">
             <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
           </svg>
           <span>Saved</span>
         </button>
-
-        <div class="filter-separator"></div>
 
         <!-- Quick UX Presets -->
         <button id="filterBengaluruBtn" class="chip chip-preset" data-active="false" title="Filter competitions hosted in or targeting Bengaluru (SSB)">
@@ -559,6 +559,6 @@
   <div id="toast" class="toast hidden"></div>
 
   <!-- App Script -->
-  <script src="app.js?v=15"></script>
+  <script src="app.js?v=16"></script>
 </body>
 </html>

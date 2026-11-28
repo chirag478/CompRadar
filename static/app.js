@@ -349,17 +349,56 @@ function setupEventListeners() {
     if (clearSearch) clearSearch.classList.remove('hidden');
   }
   if (sortSelect) sortSelect.value = state.sort.startsWith('deadline') ? 'deadline' : state.sort;
-  document.querySelectorAll('[data-category]').forEach(c => {
-    c.classList.toggle('active', c.dataset.category === state.category);
-  });
   if (savedFilterBtn) savedFilterBtn.classList.toggle('active', state.savedOnly);
   if (filterUrgentBtn) filterUrgentBtn.classList.toggle('active', state.urgentOnly);
   if (filterHighPrizeBtn) filterHighPrizeBtn.classList.toggle('active', state.highPrizeOnly);
   if (filterPpoBtn) filterPpoBtn.classList.toggle('active', state.ppoOnly);
   if (filterMbaBtn) filterMbaBtn.classList.toggle('active', state.mba1stOnly);
 
-  // Custom Animated Source Dropdown
-  const sourceLabels = {
+  // Reusable Custom Animated Dropdown Helper
+  function setupCustomDropdown(rootId, labelsMap, getVal, setVal) {
+    const root = document.getElementById(rootId);
+    if (!root) return;
+    const btn = root.querySelector('.custom-dropdown-trigger');
+    const label = btn ? btn.querySelector('span') : null;
+    const menu = root.querySelector('.custom-dropdown-menu');
+    if (!btn || !menu) return;
+
+    function syncUI() {
+      const cur = getVal();
+      if (label) label.textContent = labelsMap[cur] || cur;
+      menu.querySelectorAll('.custom-dropdown-item').forEach(item => {
+        item.classList.toggle('active', item.dataset.value === cur);
+      });
+    }
+    syncUI();
+
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const willOpen = !root.classList.contains('open');
+      document.querySelectorAll('.custom-dropdown.open').forEach(d => {
+        d.classList.remove('open');
+        const b = d.querySelector('.custom-dropdown-trigger');
+        if (b) b.setAttribute('aria-expanded', 'false');
+      });
+      if (willOpen) {
+        root.classList.add('open');
+        btn.setAttribute('aria-expanded', 'true');
+      }
+    });
+
+    menu.addEventListener('click', (e) => {
+      const item = e.target.closest('.custom-dropdown-item');
+      if (!item) return;
+      setVal(item.dataset.value);
+      syncUI();
+      root.classList.remove('open');
+      btn.setAttribute('aria-expanded', 'false');
+      fetchOpportunities();
+    });
+  }
+
+  setupCustomDropdown('sourceDropdown', {
     all: 'All Platforms (9)',
     unstop: 'Unstop',
     devfolio: 'Devfolio',
@@ -370,60 +409,36 @@ function setupEventListeners() {
     bschool: 'B-School Fests',
     corporate: 'Corporate Flagships',
     curated: 'Curated Feed'
-  };
+  }, () => state.source, (v) => { state.source = v; });
 
-  function syncSourceDropdownUI() {
-    if (sourceDropdownLabel) {
-      sourceDropdownLabel.textContent = sourceLabels[state.source] || state.source;
-    }
-    if (sourceDropdownMenu) {
-      sourceDropdownMenu.querySelectorAll('.custom-dropdown-item').forEach(item => {
-        item.classList.toggle('active', item.dataset.value === state.source);
+  setupCustomDropdown('trackDropdown', {
+    all: 'All Tracks',
+    hackathons: 'Tech Hackathons',
+    case_study: 'Product Cases',
+    strategy: 'Strategy & Consulting',
+    marketing: 'Marketing & Brand',
+    product: 'Product Mgmt',
+    hiring: 'Hiring Challenges'
+  }, () => state.category, (v) => { state.category = v; });
+
+  document.addEventListener('click', (e) => {
+    if (!e.target.closest('.custom-dropdown')) {
+      document.querySelectorAll('.custom-dropdown.open').forEach(d => {
+        d.classList.remove('open');
+        const b = d.querySelector('.custom-dropdown-trigger');
+        if (b) b.setAttribute('aria-expanded', 'false');
       });
     }
-  }
-  syncSourceDropdownUI();
+  });
 
-  if (sourceDropdown && sourceDropdownBtn && sourceDropdownMenu) {
-    sourceDropdownBtn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      const isOpen = sourceDropdown.classList.toggle('open');
-      sourceDropdownBtn.setAttribute('aria-expanded', String(isOpen));
-    });
-
-    sourceDropdownMenu.addEventListener('click', (e) => {
-      const item = e.target.closest('.custom-dropdown-item');
-      if (!item) return;
-      state.source = item.dataset.value;
-      syncSourceDropdownUI();
-      sourceDropdown.classList.remove('open');
-      sourceDropdownBtn.setAttribute('aria-expanded', 'false');
-      fetchOpportunities();
-    });
-
-    document.addEventListener('click', (e) => {
-      if (!sourceDropdown.contains(e.target)) {
-        sourceDropdown.classList.remove('open');
-        sourceDropdownBtn.setAttribute('aria-expanded', 'false');
-      }
-    });
-
-    document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape' && sourceDropdown.classList.contains('open')) {
-        sourceDropdown.classList.remove('open');
-        sourceDropdownBtn.setAttribute('aria-expanded', 'false');
-      }
-    });
-  }
-
-  // Category filter chips
-  document.querySelectorAll('[data-category]').forEach(chip => {
-    chip.addEventListener('click', () => {
-      document.querySelectorAll('[data-category]').forEach(c => c.classList.remove('active'));
-      chip.classList.add('active');
-      state.category = chip.dataset.category;
-      fetchOpportunities();
-    });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      document.querySelectorAll('.custom-dropdown.open').forEach(d => {
+        d.classList.remove('open');
+        const b = d.querySelector('.custom-dropdown-trigger');
+        if (b) b.setAttribute('aria-expanded', 'false');
+      });
+    }
   });
 
   // Saved bookmark filter
