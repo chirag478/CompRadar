@@ -75,7 +75,10 @@ function syncUrlFromState() {
 const searchInput = document.getElementById('searchInput');
 const clearSearch = document.getElementById('clearSearch');
 const sortSelect = document.getElementById('sortSelect');
-const sourceSelect = document.getElementById('sourceSelect');
+const sourceDropdown = document.getElementById('sourceDropdown');
+const sourceDropdownBtn = document.getElementById('sourceDropdownBtn');
+const sourceDropdownLabel = document.getElementById('sourceDropdownLabel');
+const sourceDropdownMenu = document.getElementById('sourceDropdownMenu');
 const locationSelect = document.getElementById('locationSelect');
 const savedFilterBtn = document.getElementById('savedFilterBtn');
 const filterBengaluruBtn = document.getElementById('filterBengaluruBtn');
@@ -346,7 +349,6 @@ function setupEventListeners() {
     if (clearSearch) clearSearch.classList.remove('hidden');
   }
   if (sortSelect) sortSelect.value = state.sort.startsWith('deadline') ? 'deadline' : state.sort;
-  if (sourceSelect) sourceSelect.value = state.source;
   document.querySelectorAll('[data-category]').forEach(c => {
     c.classList.toggle('active', c.dataset.category === state.category);
   });
@@ -356,11 +358,61 @@ function setupEventListeners() {
   if (filterPpoBtn) filterPpoBtn.classList.toggle('active', state.ppoOnly);
   if (filterMbaBtn) filterMbaBtn.classList.toggle('active', state.mba1stOnly);
 
-  // Source dropdown
-  if (sourceSelect) {
-    sourceSelect.addEventListener('change', (e) => {
-      state.source = e.target.value;
+  // Custom Animated Source Dropdown
+  const sourceLabels = {
+    all: 'All Platforms (9)',
+    unstop: 'Unstop',
+    devfolio: 'Devfolio',
+    devpost: 'Devpost',
+    hackerearth: 'HackerEarth',
+    superteam: 'Superteam Earn',
+    kaggle: 'Kaggle & ML',
+    bschool: 'B-School Fests',
+    corporate: 'Corporate Flagships',
+    curated: 'Curated Feed'
+  };
+
+  function syncSourceDropdownUI() {
+    if (sourceDropdownLabel) {
+      sourceDropdownLabel.textContent = sourceLabels[state.source] || state.source;
+    }
+    if (sourceDropdownMenu) {
+      sourceDropdownMenu.querySelectorAll('.custom-dropdown-item').forEach(item => {
+        item.classList.toggle('active', item.dataset.value === state.source);
+      });
+    }
+  }
+  syncSourceDropdownUI();
+
+  if (sourceDropdown && sourceDropdownBtn && sourceDropdownMenu) {
+    sourceDropdownBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const isOpen = sourceDropdown.classList.toggle('open');
+      sourceDropdownBtn.setAttribute('aria-expanded', String(isOpen));
+    });
+
+    sourceDropdownMenu.addEventListener('click', (e) => {
+      const item = e.target.closest('.custom-dropdown-item');
+      if (!item) return;
+      state.source = item.dataset.value;
+      syncSourceDropdownUI();
+      sourceDropdown.classList.remove('open');
+      sourceDropdownBtn.setAttribute('aria-expanded', 'false');
       fetchOpportunities();
+    });
+
+    document.addEventListener('click', (e) => {
+      if (!sourceDropdown.contains(e.target)) {
+        sourceDropdown.classList.remove('open');
+        sourceDropdownBtn.setAttribute('aria-expanded', 'false');
+      }
+    });
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && sourceDropdown.classList.contains('open')) {
+        sourceDropdown.classList.remove('open');
+        sourceDropdownBtn.setAttribute('aria-expanded', 'false');
+      }
     });
   }
 

@@ -22,7 +22,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=14">
+  <link rel="stylesheet" href="style.css?v=15">
 </head>
 <body class="theme-dark">
   <!-- Top App Navigation -->
@@ -197,20 +197,61 @@
 
     <!-- Source and Category Filter Bar -->
     <section class="filters-dock">
-      <!-- Source dropdown -->
-      <div class="source-dropdown-wrap" style="flex-shrink: 0;">
-        <select id="sourceSelect" class="clean-select" title="Filter by Source Platform">
-          <option value="all">Source: All Platforms (9)</option>
-          <option value="unstop">Unstop</option>
-          <option value="devfolio">Devfolio</option>
-          <option value="devpost">Devpost</option>
-          <option value="hackerearth">HackerEarth</option>
-          <option value="superteam">Superteam Earn</option>
-          <option value="kaggle">Kaggle & ML</option>
-          <option value="bschool">B-School Fests</option>
-          <option value="corporate">Corporate Flagships</option>
-          <option value="curated">Curated Feed</option>
-        </select>
+      <!-- Custom Animated Source Dropdown -->
+      <div class="custom-dropdown" id="sourceDropdown">
+        <button type="button" class="custom-dropdown-trigger" id="sourceDropdownBtn" aria-haspopup="listbox" aria-expanded="false">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="icon-xs">
+            <polygon points="12 2 2 7 12 12 22 7 12 2"></polygon>
+            <polyline points="2 17 12 22 22 17"></polyline>
+            <polyline points="2 12 12 17 22 12"></polyline>
+          </svg>
+          <span id="sourceDropdownLabel">All Platforms (9)</span>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="dropdown-chevron icon-xs">
+            <polyline points="6 9 12 15 18 9"></polyline>
+          </svg>
+        </button>
+        <div class="custom-dropdown-menu" id="sourceDropdownMenu" role="listbox">
+          <button type="button" class="custom-dropdown-item active" data-value="all">
+            <span class="src-option-left"><span class="src-dot-live"></span>All Platforms</span>
+            <span class="src-option-badge">9</span>
+          </button>
+          <button type="button" class="custom-dropdown-item" data-value="unstop">
+            <span class="src-option-left"><span class="src-dot-muted"></span>Unstop</span>
+            <span class="src-option-check">✓</span>
+          </button>
+          <button type="button" class="custom-dropdown-item" data-value="devfolio">
+            <span class="src-option-left"><span class="src-dot-muted"></span>Devfolio</span>
+            <span class="src-option-check">✓</span>
+          </button>
+          <button type="button" class="custom-dropdown-item" data-value="devpost">
+            <span class="src-option-left"><span class="src-dot-muted"></span>Devpost</span>
+            <span class="src-option-check">✓</span>
+          </button>
+          <button type="button" class="custom-dropdown-item" data-value="hackerearth">
+            <span class="src-option-left"><span class="src-dot-muted"></span>HackerEarth</span>
+            <span class="src-option-check">✓</span>
+          </button>
+          <button type="button" class="custom-dropdown-item" data-value="superteam">
+            <span class="src-option-left"><span class="src-dot-muted"></span>Superteam Earn</span>
+            <span class="src-option-check">✓</span>
+          </button>
+          <button type="button" class="custom-dropdown-item" data-value="kaggle">
+            <span class="src-option-left"><span class="src-dot-muted"></span>Kaggle & ML</span>
+            <span class="src-option-check">✓</span>
+          </button>
+          <button type="button" class="custom-dropdown-item" data-value="bschool">
+            <span class="src-option-left"><span class="src-dot-muted"></span>B-School Fests</span>
+            <span class="src-option-check">✓</span>
+          </button>
+          <button type="button" class="custom-dropdown-item" data-value="corporate">
+            <span class="src-option-left"><span class="src-dot-muted"></span>Corporate Flagships</span>
+            <span class="src-option-check">✓</span>
+          </button>
+          <button type="button" class="custom-dropdown-item" data-value="curated">
+            <span class="src-option-left"><span class="src-dot-muted"></span>Curated Feed</span>
+            <span class="src-option-check">✓</span>
+          </button>
+        </div>
       </div>
 
       <div class="filter-separator"></div>
@@ -518,6 +559,6 @@
   <div id="toast" class="toast hidden"></div>
 
   <!-- App Script -->
-  <script src="app.js?v=14"></script>
+  <script src="app.js?v=15"></script>
 </body>
 </html>
