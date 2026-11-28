@@ -8,8 +8,12 @@ import io
 import json
 from scrapers.unstop import UnstopScraper
 from scrapers.devpost import DevpostScraper
+from scrapers.devfolio import DevfolioScraper
+from scrapers.hackerearth import HackerEarthScraper
+from scrapers.superteam import SuperteamScraper
 from scrapers.kaggle import KaggleScraper
 from scrapers.bschool_fests import BSchoolFestScraper
+from scrapers.corporate_flagships import CorporateFlagshipScraper
 from scrapers.curated import CuratedFeedScraper
 import database
 
@@ -17,8 +21,12 @@ class OpportunityAggregator:
     def __init__(self):
         self.unstop = UnstopScraper()
         self.devpost = DevpostScraper()
+        self.devfolio = DevfolioScraper()
+        self.hackerearth = HackerEarthScraper()
+        self.superteam = SuperteamScraper()
         self.kaggle = KaggleScraper()
         self.bschool_fests = BSchoolFestScraper()
+        self.corporate = CorporateFlagshipScraper()
         self.curated = CuratedFeedScraper()
 
     def scrape_all(self, category="all", query=None, limit=25):
@@ -28,7 +36,7 @@ class OpportunityAggregator:
         results = []
         futures = []
 
-        with ThreadPoolExecutor(max_workers=5) as executor:
+        with ThreadPoolExecutor(max_workers=9) as executor:
             # 1. Unstop Scraper (All domains)
             futures.append(executor.submit(self.unstop.scrape, category=category, query=query, limit=limit))
             
@@ -36,15 +44,30 @@ class OpportunityAggregator:
             if category in ["all", "hackathons", "tech", "product"]:
                 futures.append(executor.submit(self.devpost.scrape, query=query, limit=limit))
 
-            # 3. Kaggle Scraper (Tech, AI/ML, Data Science, Hackathons)
+            # 3. Devfolio Scraper (Indian & Bengaluru Hackathons)
+            if category in ["all", "hackathons", "tech", "product"]:
+                futures.append(executor.submit(self.devfolio.scrape, query=query, limit=limit))
+
+            # 4. HackerEarth Scraper (Hackathons & Hiring Challenges)
+            if category in ["all", "hackathons", "tech", "hiring"]:
+                futures.append(executor.submit(self.hackerearth.scrape, category=category, query=query, limit=limit))
+
+            # 5. Superteam Earn Scraper (Product, Growth, Design & Dev Bounties)
+            if category in ["all", "hackathons", "product", "marketing", "tech"]:
+                futures.append(executor.submit(self.superteam.scrape, category=category, query=query, limit=limit))
+
+            # 6. Kaggle Scraper (Tech, AI/ML, Data Science, Hackathons)
             if category in ["all", "hackathons", "tech", "ml", "ai"]:
                 futures.append(executor.submit(self.kaggle.scrape, category=category, query=query, limit=limit))
 
-            # 4. Premier B-School Fests Scraper (Case Studies, Strategy, Marketing)
-            if category in ["all", "case_studies", "strategy", "marketing", "business"]:
+            # 7. Premier B-School Fests Scraper (Case Studies, Strategy, Marketing)
+            if category in ["all", "case_studies", "case_study", "strategy", "marketing", "product", "business"]:
                 futures.append(executor.submit(self.bschool_fests.scrape, category=category, query=query, limit=limit))
 
-            # 5. Curated Feed Scraper
+            # 8. Corporate Flagships & DrivenData ML
+            futures.append(executor.submit(self.corporate.scrape, category=category, query=query, limit=limit))
+
+            # 9. Curated Feed Scraper
             futures.append(executor.submit(self.curated.scrape, category=category, query=query, limit=limit))
 
             for future in as_completed(futures):
