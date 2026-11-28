@@ -22,7 +22,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=17">
+  <link rel="stylesheet" href="style.css?v=18">
 </head>
 <body class="theme-dark">
   <!-- Top App Navigation -->
@@ -173,24 +173,77 @@
           </button>
         </div>
 
-        <div class="sort-wrapper">
-          <select id="locationSelect" class="clean-select" title="Filter by City / Mode">
-            <option value="all">Location: All Cities</option>
-            <option value="bengaluru">📍 Bengaluru (BLR)</option>
-            <option value="online">🌐 Online / Remote</option>
-            <option value="hybrid">🏛️ Hybrid / In-Person</option>
-            <option value="delhi">🏙️ Delhi NCR</option>
-            <option value="mumbai">🏙️ Mumbai</option>
-            <option value="hyderabad">🏙️ Hyderabad</option>
-          </select>
+        <div class="custom-dropdown" id="locationDropdown">
+          <button type="button" class="custom-dropdown-trigger" id="locationDropdownBtn" aria-haspopup="listbox" aria-expanded="false">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="icon-xs">
+              <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+              <circle cx="12" cy="10" r="3"></circle>
+            </svg>
+            <span id="locationDropdownLabel">All Cities</span>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="dropdown-chevron icon-xs">
+              <polyline points="6 9 12 15 18 9"></polyline>
+            </svg>
+          </button>
+          <div class="custom-dropdown-menu" id="locationDropdownMenu" role="listbox">
+            <button type="button" class="custom-dropdown-item active" data-value="all">
+              <span class="src-option-left"><span class="src-dot-live"></span>All Cities</span>
+              <span class="src-option-check">✓</span>
+            </button>
+            <button type="button" class="custom-dropdown-item" data-value="bengaluru">
+              <span class="src-option-left"><span class="src-dot-muted"></span>Bengaluru (BLR)</span>
+              <span class="src-option-check">✓</span>
+            </button>
+            <button type="button" class="custom-dropdown-item" data-value="online">
+              <span class="src-option-left"><span class="src-dot-muted"></span>Online / Remote</span>
+              <span class="src-option-check">✓</span>
+            </button>
+            <button type="button" class="custom-dropdown-item" data-value="hybrid">
+              <span class="src-option-left"><span class="src-dot-muted"></span>Hybrid / In-Person</span>
+              <span class="src-option-check">✓</span>
+            </button>
+            <button type="button" class="custom-dropdown-item" data-value="delhi">
+              <span class="src-option-left"><span class="src-dot-muted"></span>Delhi NCR</span>
+              <span class="src-option-check">✓</span>
+            </button>
+            <button type="button" class="custom-dropdown-item" data-value="mumbai">
+              <span class="src-option-left"><span class="src-dot-muted"></span>Mumbai</span>
+              <span class="src-option-check">✓</span>
+            </button>
+            <button type="button" class="custom-dropdown-item" data-value="hyderabad">
+              <span class="src-option-left"><span class="src-dot-muted"></span>Hyderabad</span>
+              <span class="src-option-check">✓</span>
+            </button>
+          </div>
         </div>
 
-        <div class="sort-wrapper">
-          <select id="sortSelect" class="clean-select">
-            <option value="deadline">Sort: Deadline (Urgent First)</option>
-            <option value="newest">Sort: Recently Added</option>
-            <option value="prize">Sort: Highest Prize Pool</option>
-          </select>
+        <div class="custom-dropdown" id="sortDropdown">
+          <button type="button" class="custom-dropdown-trigger" id="sortDropdownBtn" aria-haspopup="listbox" aria-expanded="false">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="icon-xs">
+              <line x1="4" y1="6" x2="16" y2="6"></line>
+              <line x1="4" y1="12" x2="12" y2="12"></line>
+              <line x1="4" y1="18" x2="8" y2="18"></line>
+              <polyline points="15 15 18 18 21 15"></polyline>
+              <line x1="18" y1="10" x2="18" y2="18"></line>
+            </svg>
+            <span id="sortDropdownLabel">Deadline (Urgent)</span>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="dropdown-chevron icon-xs">
+              <polyline points="6 9 12 15 18 9"></polyline>
+            </svg>
+          </button>
+          <div class="custom-dropdown-menu custom-dropdown-menu-right" id="sortDropdownMenu" role="listbox">
+            <button type="button" class="custom-dropdown-item active" data-value="deadline">
+              <span class="src-option-left"><span class="src-dot-live"></span>Deadline (Urgent First)</span>
+              <span class="src-option-check">✓</span>
+            </button>
+            <button type="button" class="custom-dropdown-item" data-value="newest">
+              <span class="src-option-left"><span class="src-dot-muted"></span>Recently Added</span>
+              <span class="src-option-check">✓</span>
+            </button>
+            <button type="button" class="custom-dropdown-item" data-value="prize">
+              <span class="src-option-left"><span class="src-dot-muted"></span>Highest Prize Pool</span>
+              <span class="src-option-check">✓</span>
+            </button>
+          </div>
         </div>
       </div>
     </section>
@@ -561,6 +614,6 @@
   <div id="toast" class="toast hidden"></div>
 
   <!-- App Script -->
-  <script src="app.js?v=17"></script>
+  <script src="app.js?v=18"></script>
 </body>
 </html>

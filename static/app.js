@@ -74,12 +74,10 @@ function syncUrlFromState() {
 // DOM References
 const searchInput = document.getElementById('searchInput');
 const clearSearch = document.getElementById('clearSearch');
-const sortSelect = document.getElementById('sortSelect');
 const sourceDropdown = document.getElementById('sourceDropdown');
 const sourceDropdownBtn = document.getElementById('sourceDropdownBtn');
 const sourceDropdownLabel = document.getElementById('sourceDropdownLabel');
 const sourceDropdownMenu = document.getElementById('sourceDropdownMenu');
-const locationSelect = document.getElementById('locationSelect');
 const savedFilterBtn = document.getElementById('savedFilterBtn');
 const filterBengaluruBtn = document.getElementById('filterBengaluruBtn');
 const filterUrgentBtn = document.getElementById('filterUrgentBtn');
@@ -182,7 +180,7 @@ function setupEventListeners() {
       } else if (field === 'title') {
         state.sort = state.sort === 'title' ? 'deadline' : 'title';
       }
-      sortSelect.value = state.sort.startsWith('deadline') ? 'deadline' : state.sort;
+      if (typeof syncSortDropdownGlobal === 'function') syncSortDropdownGlobal();
       fetchOpportunities();
       return;
     }
@@ -315,30 +313,16 @@ function setupEventListeners() {
     searchInput.focus();
   });
 
-  // Sort dropdown
-  sortSelect.addEventListener('change', (e) => {
-    state.sort = e.target.value;
-    fetchOpportunities();
-  });
-
-  // Location dropdown & Bengaluru quick-preset sync
-  if (locationSelect) {
-    locationSelect.value = state.location;
-    locationSelect.addEventListener('change', (e) => {
-      state.location = e.target.value;
-      if (filterBengaluruBtn) {
-        filterBengaluruBtn.classList.toggle('active', state.location === 'bengaluru');
-      }
-      fetchOpportunities();
-    });
-  }
+  // Bengaluru quick-preset sync
+  let syncLocationUI = () => {};
+  let syncSortUI = () => {};
 
   if (filterBengaluruBtn) {
     filterBengaluruBtn.classList.toggle('active', state.location === 'bengaluru');
     filterBengaluruBtn.addEventListener('click', () => {
       state.location = state.location === 'bengaluru' ? 'all' : 'bengaluru';
       filterBengaluruBtn.classList.toggle('active', state.location === 'bengaluru');
-      if (locationSelect) locationSelect.value = state.location;
+      syncLocationUI();
       fetchOpportunities();
     });
   }
@@ -348,7 +332,6 @@ function setupEventListeners() {
     searchInput.value = state.query;
     if (clearSearch) clearSearch.classList.remove('hidden');
   }
-  if (sortSelect) sortSelect.value = state.sort.startsWith('deadline') ? 'deadline' : state.sort;
   if (savedFilterBtn) savedFilterBtn.classList.toggle('active', state.savedOnly);
   if (filterUrgentBtn) filterUrgentBtn.classList.toggle('active', state.urgentOnly);
   if (filterHighPrizeBtn) filterHighPrizeBtn.classList.toggle('active', state.highPrizeOnly);
@@ -396,6 +379,8 @@ function setupEventListeners() {
       btn.setAttribute('aria-expanded', 'false');
       fetchOpportunities();
     });
+
+    return syncUI;
   }
 
   setupCustomDropdown('sourceDropdown', {
@@ -420,6 +405,28 @@ function setupEventListeners() {
     product: 'Product Mgmt',
     hiring: 'Hiring Challenges'
   }, () => state.category, (v) => { state.category = v; });
+
+  syncLocationUI = setupCustomDropdown('locationDropdown', {
+    all: 'All Cities',
+    bengaluru: 'Bengaluru (BLR)',
+    online: 'Online / Remote',
+    hybrid: 'Hybrid / In-Person',
+    delhi: 'Delhi NCR',
+    mumbai: 'Mumbai',
+    hyderabad: 'Hyderabad'
+  }, () => state.location, (v) => {
+    state.location = v;
+    if (filterBengaluruBtn) filterBengaluruBtn.classList.toggle('active', v === 'bengaluru');
+  }) || (() => {});
+
+  syncSortUI = setupCustomDropdown('sortDropdown', {
+    deadline: 'Deadline (Urgent)',
+    newest: 'Recently Added',
+    prize: 'Highest Prize Pool'
+  }, () => (state.sort.startsWith('deadline') ? 'deadline' : state.sort), (v) => {
+    state.sort = v;
+  }) || (() => {});
+  window.syncSortDropdownGlobal = syncSortUI;
 
   document.addEventListener('click', (e) => {
     if (!e.target.closest('.custom-dropdown')) {
