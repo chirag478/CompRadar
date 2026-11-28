@@ -85,6 +85,20 @@ def deduplicate_db():
     conn.close()
     return len(to_delete)
 
+def remove_ug_only():
+    """Deletes competitions restricted exclusively to undergraduates/school students."""
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+        DELETE FROM opportunities
+        WHERE (LOWER(tags) LIKE '%undergraduate%' OR LOWER(tags) LIKE '%school student%' OR LOWER(title) LIKE '%ug only%' OR LOWER(title) LIKE '%undergraduate only%')
+          AND NOT (LOWER(tags) LIKE '%postgraduate%' OR LOWER(tags) LIKE '%mba%' OR LOWER(tags) LIKE '%pg%' OR LOWER(tags) LIKE '%open to all%')
+    """)
+    deleted = cursor.rowcount
+    conn.commit()
+    conn.close()
+    return deleted
+
 def save_opportunities(opportunities):
     """
     Inserts or updates opportunities while preserving user bookmarks, application status,
@@ -172,6 +186,9 @@ def get_opportunities(source=None, category=None, query=None, bookmarked_only=Fa
     # Exclude ended/expired opportunities by default
     if not include_ended:
         conditions.append("(status != 'Closed' AND days_left_num >= 0 AND LOWER(days_left) NOT LIKE '%ended%' AND LOWER(days_left) NOT LIKE '%closed%')")
+
+    # Exclude undergraduate-only / school-only competitions
+    conditions.append("NOT ((LOWER(tags) LIKE '%undergraduate%' OR LOWER(tags) LIKE '%school student%' OR LOWER(title) LIKE '%ug only%' OR LOWER(title) LIKE '%undergraduate only%') AND NOT (LOWER(tags) LIKE '%postgraduate%' OR LOWER(tags) LIKE '%mba%' OR LOWER(tags) LIKE '%pg%' OR LOWER(tags) LIKE '%open to all%'))")
 
     if urgent_only:
         conditions.append("days_left_num >= 0 AND days_left_num <= 3")

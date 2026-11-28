@@ -182,6 +182,13 @@ class UnstopScraper:
             if "PPO / PPI" not in tags:
                 tags.append("PPO / PPI")
         filters_blob = json.dumps(filters or "").lower()
+        # Exclude undergraduate-only / school-only competitions
+        ug_check_blob = f"{title_lower} {filters_blob}"
+        has_ug_tag = any(k in ug_check_blob for k in ("undergraduate", "ug only", "b.tech", "btech", "school student", "high school"))
+        has_pg_tag = bool(re.search(r"\b(postgraduate|mba|pg|pgdm|open to all|everyone|working professionals?)\b", ug_check_blob))
+        if has_ug_tag and not has_pg_tag:
+            return None
+
         if any(k in filters_blob for k in ("mba", "postgraduate", "pg", "management")):
             if "MBA / PG" not in tags:
                 tags.append("MBA / PG")
@@ -254,6 +261,8 @@ class UnstopScraper:
             items = data.get('data', {}).get('data', [])
             for raw in items:
                 norm = self._normalize_item(raw, inferred_category=default_cat)
+                if not norm:
+                    continue
                 # Filter out ended / closed competitions
                 if norm['status'] == "Closed" or norm.get('days_left_num', 0) < 0 or "ended" in str(norm.get('days_left', '')).lower():
                     continue

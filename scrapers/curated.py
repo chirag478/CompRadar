@@ -152,6 +152,9 @@ class CuratedFeedScraper:
             notes = (row.get('Evidence / notes') or row.get('notes') or '').strip()
             format_rounds = (row.get('Format / rounds') or '').strip()
             eligibility = (row.get('First-year PG eligibility') or '').strip()
+            elig_low = eligibility.lower()
+            if elig_low.startswith(('no', 'ug only', 'undergraduate only', 'not eligible')):
+                continue
             team_size = (row.get('Team size') or '').strip()
             location = (row.get('Bengaluru connection') or 'Online').strip()
             source_platform = (row.get('Source') or 'Curated').strip()
